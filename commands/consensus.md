@@ -75,7 +75,7 @@ For any Bash call that exits non-zero: substitute `[Voice unavailable — check 
 
 ## Step 4 — Synthesize
 
-```
+```text
 Agent(
   subagent_type="tao:consensus-synthesizer",
   model="opus",
@@ -96,3 +96,19 @@ Agent(
 Note any unavailable voices and how that affects confidence."""
 )
 ```
+
+## Step 5 — Run stats
+
+After the synthesizer returns, append a run summary table. Extract `[tao-stats]` lines from each Bash tool result's stderr (lines starting with `[tao-stats]`). Use `—` for Claude voices (no token telemetry available from Agent calls).
+
+```text
+## Run stats
+| Voice         | Provider | Model         | Tokens in | Tokens out | Time   | Tok/s |
+|---------------|----------|---------------|-----------|------------|--------|-------|
+| Claude Opus   | claude   | opus          | —         | —          | —      | —     |
+| Grok Critic   | xai      | <model>       | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
+| Codex Analyst | codex    | <model>       | ?         | ?          | <Xs>   | n/a   |
+| Ollama Local  | ollama   | <model>       | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
+```
+
+Omit rows for unavailable voices or mark all cells `unavailable`.

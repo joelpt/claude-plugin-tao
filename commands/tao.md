@@ -128,7 +128,7 @@ For **skeptic** mode:
 
 **After all three complete**, present results with neutral attribution — do NOT editorialize or weight voices. Show each response verbatim, then a mechanical merge:
 
-```
+```text
 ## Claude [sonnet|opus]
 <claude response verbatim>
 
@@ -149,6 +149,19 @@ For **skeptic** mode:
 ```
 
 The synthesis section is a mechanical merge and diff — do not add interpretation, editorial judgment, or a recommendation unless the user explicitly asks for one afterward.
+
+After synthesis, append a run summary table. Extract `[tao-stats]` lines from Bash stderr (each Bash tool result includes stderr — scan for lines beginning `[tao-stats]`). Use `—` for the Claude voice (no token telemetry available).
+
+```text
+## Run stats
+| Voice   | Provider | Model        | Tokens in | Tokens out | Time   | Tok/s |
+|---------|----------|--------------|-----------|------------|--------|-------|
+| Claude  | claude   | <model>      | —         | —          | —      | —     |
+| Grok    | xai      | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
+| Ollama  | ollama   | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
+```
+
+If a voice was unavailable, omit its row or mark all cells `unavailable`.
 
 ### Inline Modes (No Agent Needed)
 

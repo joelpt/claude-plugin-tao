@@ -37,11 +37,24 @@ def _version_key(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in re.split(r"[.\-]", v.lstrip("v")) if x.isdigit())
 
 
-def _urlopen(req: urllib.request.Request, timeout: int) -> http.client.HTTPResponse:
-    """Open a URL request, retrying up to 8 times on 529 with exponential backoff."""
+def _urlopen(
+    req: urllib.request.Request,
+    timeout: int,
+    _retries: list[int] | None = None,
+) -> http.client.HTTPResponse:
+    """Open a URL request, retrying up to 8 times on 529 with exponential backoff.
+
+    Args:
+        req: The request to open.
+        timeout: Socket timeout in seconds.
+        _retries: If provided, the number of retries performed is appended on success.
+    """
     for attempt in range(9):
         try:
-            return urllib.request.urlopen(req, timeout=timeout)  # type: ignore[return-value]
+            response = urllib.request.urlopen(req, timeout=timeout)  # type: ignore[return-value]
+            if _retries is not None:
+                _retries.append(attempt)
+            return response
         except urllib.error.HTTPError as e:
             if e.code == 529 and attempt < 8:
                 delay = min(2**attempt + random.uniform(0, 1), 60)
@@ -53,6 +66,36 @@ def _urlopen(req: urllib.request.Request, timeout: int) -> http.client.HTTPRespo
             else:
                 raise
     raise RuntimeError("unreachable")
+
+
+def _emit_stats(
+    provider: str,
+    model: str,
+    tok_in: int | str,
+    tok_out: int | str,
+    elapsed: float,
+    tok_per_s: float | str,
+    retries: int = 0,
+) -> None:
+    """Print a machine-parseable stats line to stderr for tao run summaries.
+
+    Args:
+        provider: Provider name (gemini, xai, ollama, codex).
+        model: Model identifier string.
+        tok_in: Input token count, or "?" if unavailable.
+        tok_out: Output token count, or "?" if unavailable.
+        elapsed: Wall-clock seconds including any 529 retry backoff.
+        tok_per_s: Throughput, or "?" / "n/a" if unavailable.
+        retries: Number of 529 retries performed; omitted from output when 0.
+    """
+    retry_suffix = f" retries={retries}" if retries > 0 else ""
+    print(
+        f"[tao-stats] provider={provider} model={model}"
+        f" tok_in={tok_in} tok_out={tok_out}"
+        f" elapsed={elapsed:.1f}s tok/s={tok_per_s if isinstance(tok_per_s, str) else f'{tok_per_s:.1f}'}"
+        f"{retry_suffix}",
+        file=sys.stderr,
+    )
 
 
 def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
@@ -77,8 +120,11 @@ def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: 
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}
     )
-    with _urlopen(req, timeout=120) as resp:
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    with _urlopen(req, timeout=120, _retries=_retries) as resp:
         result = json.loads(resp.read())
+    elapsed = time.monotonic() - t0
 
     candidates = result.get("candidates", [])
     if not candidates:
@@ -94,6 +140,12 @@ def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: 
     text = parts[0].get("text")
     if text is None:
         raise RuntimeError(f"Gemini first part has no 'text' key (part type: {list(parts[0].keys())})")
+
+    meta = result.get("usageMetadata", {})
+    tok_in = meta.get("promptTokenCount", "?")
+    tok_out = meta.get("candidatesTokenCount", "?")
+    tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
+    _emit_stats("gemini", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
     return text
 
 
@@ -119,13 +171,22 @@ def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int
             "Authorization": f"Bearer {api_key}",
         },
     )
-    with _urlopen(req, timeout=120) as resp:
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    with _urlopen(req, timeout=120, _retries=_retries) as resp:
         result = json.loads(resp.read())
+    elapsed = time.monotonic() - t0
 
     choices = result.get("choices") or []
     if not choices:
         raise RuntimeError(f"xAI returned no choices (full response: {result})")
-    return choices[0]["message"]["content"]
+    content = choices[0]["message"]["content"]
+    usage = result.get("usage") or {}
+    tok_in = usage.get("prompt_tokens", "?")
+    tok_out = usage.get("completion_tokens", "?")
+    tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
+    _emit_stats("xai", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
+    return content
 
 
 def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
@@ -157,8 +218,11 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
         headers={"Content-Type": "application/json"},
     )
     # Generous timeout — first call may load the model from disk
-    with _urlopen(req, timeout=300) as resp:
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    with _urlopen(req, timeout=300, _retries=_retries) as resp:
         result = json.loads(resp.read())
+    elapsed = time.monotonic() - t0
 
     error_msg = result.get("error")
     if error_msg:
@@ -167,6 +231,18 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     content = msg.get("content") or msg.get("thinking")
     if not content:
         raise RuntimeError(f"Ollama returned no message content (response: {result})")
+
+    tok_in = result.get("prompt_eval_count", "?")
+    tok_out = result.get("eval_count", "?")
+    # Use Ollama's native eval_duration (nanoseconds) for accurate GPU throughput.
+    eval_ns = result.get("eval_duration")
+    if isinstance(tok_out, int) and isinstance(eval_ns, int) and eval_ns > 0:
+        tok_per_s: float | str = tok_out / (eval_ns / 1e9)
+    elif isinstance(tok_out, int) and elapsed > 0:
+        tok_per_s = tok_out / elapsed
+    else:
+        tok_per_s = "?"
+    _emit_stats("ollama", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
     return content
 
 
@@ -197,7 +273,9 @@ def call_codex(prompt: str, model: str | None, system: str | None, _max_tokens: 
         cmd += ["--model", model]
 
     try:
+        t0 = time.monotonic()
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        elapsed = time.monotonic() - t0
     except FileNotFoundError:
         raise RuntimeError("'node' not found in PATH — install Node.js to use the Codex provider")
     except subprocess.TimeoutExpired as e:
@@ -211,6 +289,7 @@ def call_codex(prompt: str, model: str | None, system: str | None, _max_tokens: 
     output = result.stdout.strip()
     if not output:
         raise RuntimeError("Codex returned empty output")
+    _emit_stats("codex", model or "default", "?", "?", elapsed, "n/a")
     return output
 
 
