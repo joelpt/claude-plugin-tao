@@ -1,0 +1,24 @@
+{
+  "_comment": "Tao model configuration. Edit to swap providers/models for each role.",
+  "_providers": {
+    "claude": "Claude Max subscription — free. No key needed.",
+    "xai": "XAI_API_KEY in ~/.zshenv — api.x.ai direct.",
+    "codex": "Codex CLI companion — OpenAI subscription quota, no per-token cost. Requires codex plugin.",
+    "ollama": "Local inference, no cloud cost. Requires: ollama pull qwen3:32b && ollama serve",
+    "gemini": "GEMINI_API_KEY in ~/.zshenv — Google direct. Per-token cost."
+  },
+  "consensus": {
+    "advocate": {"provider": "claude", "model": "opus"},
+    "critic":   {"provider": "xai",   "model": "grok-4.3"},
+    "analyst":  {"provider": "codex", "model": null},
+    "local":    {"provider": "ollama","model": "qwen3:32b"}
+  },
+  "challenge": {
+    "primary":    {"provider": "claude", "model": "sonnet"},
+    "challenger": {"provider": "xai",   "model": "grok-4.3"}
+  },
+  "skeptic": {
+    "primary":    {"provider": "claude", "model": "opus"},
+    "challenger": {"provider": "xai",   "model": "grok-4.3"}
+  }
+}
