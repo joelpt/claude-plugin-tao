@@ -104,9 +104,9 @@ Include in the agent prompt:
 
 When `/tao consensus` is invoked (mode argument rather than dedicated command): forward to the same logic. Resolve paths and dispatch as documented in `commands/consensus.md`. Model assignments are in `config/models.json`.
 
-### Challenge and Skeptic Modes (Claude + Grok Parallel)
+### Challenge and Skeptic Modes (Claude + Grok + Ollama Parallel)
 
-Both modes run Claude and Grok 4.3 in parallel for dual-perspective challenge analysis.
+Both modes run three voices in parallel: Claude (primary challenger), Grok 4.3 (external adversarial), and the default local Ollama model (independent local voice).
 
 **Resolve paths**:
 ```bash
@@ -114,31 +114,41 @@ SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
 CONFIG="$SCRIPTS/../config/models.json"
 ```
 
-**Dispatch 2 voices in ONE message** (parallel tool calls):
+**Dispatch 3 voices in ONE message** (parallel tool calls):
 
 For **challenge** mode:
 - Claude (Agent): `Agent(subagent_type="tao:challenge-assessor", model="sonnet", prompt="Challenge this: <statement>")`
 - Grok (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.challenger --system="Challenge this statement aggressively. Find every flaw, assumption, and risk. Be direct." --max-tokens=4096`
+- Ollama (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.local --system="Challenge this statement. Identify every assumption, risk, and flaw. Be direct and specific." --max-tokens=4096`
 
 For **skeptic** mode:
 - Claude (Agent): `Agent(subagent_type="tao:senior-skeptic-reviewer", model="opus", prompt="Review skeptically: <proposal>")`
 - Grok (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.challenger --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" --max-tokens=4096`
+- Ollama (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.local --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." --max-tokens=4096`
 
-**After both complete**, present results with clear attribution:
+**After all three complete**, present results with neutral attribution — do NOT editorialize or weight voices. Show each response verbatim, then a mechanical merge:
 
 ```
-## Claude's Analysis
-<claude response>
+## Claude [sonnet|opus]
+<claude response verbatim>
 
-## Grok's Challenger Take
-<grok response, or "[Grok unavailable: check XAI_API_KEY in ~/.zshenv]">
+## Grok 4.3
+<grok response verbatim, or "[Grok unavailable: check XAI_API_KEY in ~/.zshenv]">
 
-## Where They Agree
-<synthesize convergence points>
+## Ollama [model-name]
+<ollama response verbatim, or "[Ollama unavailable: check ollama serve is running]">
 
-## Where They Diverge
-<synthesize key disagreements and what that tells us>
+## Points raised by multiple models
+<deduplicated list — note which models raised each point, e.g. "(Claude, Grok)">
+
+## Points raised by only one model
+<list with attribution — potential unique insights or model-specific blind spots>
+
+## Explicit disagreements
+<only where models took directly opposing positions — quote both sides>
 ```
+
+The synthesis section is a mechanical merge and diff — do not add interpretation, editorial judgment, or a recommendation unless the user explicitly asks for one afterward.
 
 ### Inline Modes (No Agent Needed)
 
@@ -167,12 +177,12 @@ When `--high-effort` (or `--thinking`) is specified:
 
 ## Notes
 
-- Most modes use Claude Max (free tier) — no external cost or keys needed.
+- Most modes use the Claude Max subscription (free tier) — no external cost or API tokens consumed.
+- `context: fork` in this file's frontmatter runs the entire tao invocation in an isolated subcontext — intermediate reasoning and agent chatter never accumulate in your main conversation window.
 - Consensus, challenge, and skeptic modes use external models with graceful degradation if unavailable.
 - Required for full multi-LLM functionality:
   - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (consensus critic + challenge/skeptic challenger)
   - Codex plugin installed + OpenAI subscription — consensus analyst voice
-  - Ollama: `ollama pull qwen3:32b` then `ollama serve` — consensus local voice
-- Model assignments are configurable in `config/models.json` — edit that file to swap providers without touching command files.
-- All agents have access to Read, Grep, Glob, Bash, and other Claude Code tools.
-- `context: fork` in this file's frontmatter isolates the entire tao run in a fresh subcontext — intermediate agent chatter doesn't accumulate in your main conversation.
+  - Ollama: `ollama pull deepseek-r1:70b` then `ollama serve` — local voice for consensus + challenge + skeptic
+- Default local model is set by `"_default_local_model"` in `config/models.json` — change it there to use a different Ollama model across all modes simultaneously.
+- All other model assignments are configurable in `config/models.json` — no command files need editing.

@@ -227,7 +227,11 @@ def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | No
         raise RuntimeError(
             f"Role '{role_path}' has no 'provider' key in config {config_path}"
         )
-    return node["provider"], node.get("model")
+    provider: str = node["provider"]
+    model: str | None = node.get("model")
+    if model is None and provider == "ollama":
+        model = config.get("_default_local_model")
+    return provider, model
 
 
 def main() -> None:

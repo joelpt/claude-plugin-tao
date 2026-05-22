@@ -1,6 +1,6 @@
 ---
 name: consensus
-description: "4-voice multi-LLM consensus analysis: Claude Opus (advocate) + Grok 4.3 (critic) + Codex/GPT (analyst) + Ollama qwen3:32b (local). Usage: /tao:consensus <question or decision>"
+description: "4-voice multi-LLM consensus analysis: Claude Opus (advocate) + Grok 4.3 (critic) + Codex/GPT (analyst) + Ollama local model (local). Usage: /tao:consensus <question or decision>"
 context: fork
 ---
 
@@ -13,7 +13,7 @@ Voices:
 - **Claude Opus** (advocate) — argues FOR. Free via Claude Max.
 - **Grok 4.3** (critic) — argues AGAINST. xAI direct API.
 - **Codex/GPT** (analyst) — neutral balanced analysis. OpenAI Codex CLI (subscription quota).
-- **Ollama qwen3:32b** (local) — independent local perspective. No cloud cost.
+- **Ollama** (local) — independent local perspective. No cloud cost. Model set by `_default_local_model` in `config/models.json`.
 
 Model assignments are configurable in `config/models.json` relative to `$TAO_SCRIPTS/..`.
 
@@ -90,7 +90,7 @@ Agent(
 ## Codex/GPT Analyst
 <codex_response_or_unavailable>
 
-## Ollama Local Voice (qwen3:32b)
+## Ollama Local Voice
 <ollama_response_or_unavailable>
 
 Note any unavailable voices and how that affects confidence."""
