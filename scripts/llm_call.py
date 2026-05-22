@@ -20,11 +20,14 @@ API keys (from ~/.zshenv — never hardcoded):
 """
 
 import argparse
+import http.client
 import json
 import os
+import random
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -32,6 +35,24 @@ import urllib.error
 def _version_key(v: str) -> tuple[int, ...]:
     """Return a numeric tuple for semver-safe sorting of version directory names."""
     return tuple(int(x) for x in re.split(r"[.\-]", v.lstrip("v")) if x.isdigit())
+
+
+def _urlopen(req: urllib.request.Request, timeout: int) -> http.client.HTTPResponse:
+    """Open a URL request, retrying up to 8 times on 529 with exponential backoff."""
+    for attempt in range(9):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)  # type: ignore[return-value]
+        except urllib.error.HTTPError as e:
+            if e.code == 529 and attempt < 8:
+                delay = min(2**attempt + random.uniform(0, 1), 60)
+                print(
+                    f"[529 overloaded] retrying in {delay:.1f}s (attempt {attempt + 1}/8)…",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+            else:
+                raise
+    raise RuntimeError("unreachable")
 
 
 def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
@@ -56,7 +77,7 @@ def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: 
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with _urlopen(req, timeout=120) as resp:
         result = json.loads(resp.read())
 
     candidates = result.get("candidates", [])
@@ -98,7 +119,7 @@ def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int
             "Authorization": f"Bearer {api_key}",
         },
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with _urlopen(req, timeout=120) as resp:
         result = json.loads(resp.read())
 
     choices = result.get("choices") or []
@@ -128,7 +149,7 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
         headers={"Content-Type": "application/json"},
     )
     # Generous timeout — first call may load the model from disk
-    with urllib.request.urlopen(req, timeout=300) as resp:
+    with _urlopen(req, timeout=300) as resp:
         result = json.loads(resp.read())
 
     error_msg = result.get("error")
