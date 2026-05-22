@@ -1,6 +1,6 @@
 {
   "_comment": "Tao model configuration. Edit to swap providers/models for each role.",
-  "_default_local_model": "deepseek-r1:70b",
+  "_default_local_model": "qwen3:32b",
   "_providers": {
     "claude": "Claude Max subscription — free. No key needed.",
     "xai": "XAI_API_KEY in ~/.zshenv — api.x.ai direct.",
