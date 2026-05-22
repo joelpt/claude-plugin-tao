@@ -136,10 +136,14 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
-    body = {
+    _THINKING_MODELS = {"qwen3", "deepseek-r1"}
+    thinking = any(model.startswith(prefix) for prefix in _THINKING_MODELS)
+
+    body: dict[str, object] = {
         "model": model,
         "messages": messages,
         "stream": False,
+        "think": thinking,
         "options": {"num_predict": max_tokens},
     }
     data = json.dumps(body).encode()
