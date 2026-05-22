@@ -139,12 +139,16 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     _THINKING_MODELS = {"qwen3", "deepseek-r1"}
     thinking = any(model.startswith(prefix) for prefix in _THINKING_MODELS)
 
+    # Thinking tokens consume from the same num_predict budget as content tokens.
+    # Add a fixed 8192-token thinking overhead so CoT doesn't crowd out the response.
+    num_predict = max_tokens + 8192 if thinking else max_tokens
+
     body: dict[str, object] = {
         "model": model,
         "messages": messages,
         "stream": False,
         "think": thinking,
-        "options": {"num_predict": max_tokens},
+        "options": {"num_predict": num_predict},
     }
     data = json.dumps(body).encode()
     req = urllib.request.Request(
@@ -160,8 +164,8 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     if error_msg:
         raise RuntimeError(f"Ollama error: {error_msg}")
     msg = result.get("message", {})
-    content = msg.get("content")
-    if content is None:
+    content = msg.get("content") or msg.get("thinking")
+    if not content:
         raise RuntimeError(f"Ollama returned no message content (response: {result})")
     return content
 

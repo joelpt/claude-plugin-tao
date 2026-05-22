@@ -66,7 +66,7 @@ printf '%s\n' "<question>" | python3 "$SCRIPTS/llm_call.py" \
 printf '%s\n' "<question>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=consensus.local \
   --system="Provide your independent perspective on this decision. Focus on practical implementation realities." \
-  --max-tokens=<4096 standard | 16384 high-effort>
+  --max-tokens=<8192 standard | 16384 high-effort>
 ```
 
 ## Step 3 — Handle results

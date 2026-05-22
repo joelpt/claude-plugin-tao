@@ -119,12 +119,12 @@ CONFIG="$SCRIPTS/../config/models.json"
 For **challenge** mode:
 - Claude (Agent): `Agent(subagent_type="tao:challenge-assessor", model="sonnet", prompt="Challenge this: <statement>")`
 - Grok (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.challenger --system="Challenge this statement aggressively. Find every flaw, assumption, and risk. Be direct." --max-tokens=4096`
-- Ollama (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.local --system="Challenge this statement. Identify every assumption, risk, and flaw. Be direct and specific." --max-tokens=4096`
+- Ollama (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.local --system="Challenge this statement. Identify every assumption, risk, and flaw. Be direct and specific." --max-tokens=8192`
 
 For **skeptic** mode:
 - Claude (Agent): `Agent(subagent_type="tao:senior-skeptic-reviewer", model="opus", prompt="Review skeptically: <proposal>")`
 - Grok (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.challenger --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" --max-tokens=4096`
-- Ollama (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.local --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." --max-tokens=4096`
+- Ollama (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.local --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." --max-tokens=8192`
 
 **After all three complete**, present results with neutral attribution — do NOT editorialize or weight voices. Show each response verbatim, then a mechanical merge:
 
