@@ -10,3 +10,5 @@ dist/
 build/
 .search-rag/
 .lance-rag/
+.claude/
+WIP.md
