@@ -97,6 +97,7 @@ Include in the agent prompt:
 2. Whether high-effort/thinking mode is enabled (add ultrathink instruction if so)
 3. Any file paths the agent should read using Read/Grep tools
 4. The focus areas if specified
+5. Output format instruction — always tell the agent how to format its response for human consumption. The dedicated command files (e.g. `commands/debug.md`, `commands/codereview.md`) contain per-mode format specs; use those as the reference. Never let an agent return a raw JSON blob as its final user-facing response.
 
 ### Consensus Mode
 

@@ -25,8 +25,22 @@ Agent(
 
 [If --files: 'Existing codebase context: <paths>']
 [If --focus-areas: 'Focus on: <areas>']
-[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for requirements discovery. Budget 32,000 thinking tokens per step.']"
+[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for requirements discovery. Budget 32,000 thinking tokens per step.']
+
+Format your response as:
+## Business Goals
+What this feature/change is actually trying to achieve. Include the implicit goals users didn't state.
+
+## Functional Requirements
+User stories in 'As a [role], I want [action] so that [outcome]' format. Group by actor.
+
+## Non-Functional Requirements
+Performance targets, security constraints, availability, scalability, compliance, backward compatibility.
+
+## Risks & Open Questions
+What could derail this? What decisions need to be made that aren't clear from the brief?
+
+## Proposed Technical Approach
+Recommended implementation direction with rationale. Note alternatives considered and why they were ruled out."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

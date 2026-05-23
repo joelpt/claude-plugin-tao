@@ -25,8 +25,21 @@ Agent(
 
 [If --files: 'Limit to: <paths>']
 [If --focus-areas: 'Focus on: <areas>']
-[If freeform: '<context>']"
+[If freeform: '<context>']
+
+Format your response as:
+## Verdict
+✅ Ready to commit | ⚠️ Minor issues (commitable with awareness) | ❌ Blockers found
+
+## Blockers
+Issues that must be fixed before commit (bugs, security holes, broken tests, missing migrations).
+File:line — description — required fix.
+
+## Warnings
+Should-fix issues that don't block the commit but should be tracked.
+
+## Suggested Commit Message
+Conventional commit format: type(scope): description
+Include a short body if the change is non-obvious."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

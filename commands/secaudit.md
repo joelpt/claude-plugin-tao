@@ -27,8 +27,21 @@ Agent(
 [If --files: 'Files to audit: <paths>']
 [If --prompt or freeform: 'Focus: <text>']
 [If --focus-areas: 'Threat categories: <areas>']
-[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for threat modeling steps. Budget 32,000 thinking tokens per step.']"
+[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for threat modeling steps. Budget 32,000 thinking tokens per step.']
+
+Format your response as:
+## Executive Summary
+Total findings by severity (Critical: N, High: N, Medium: N, Low: N). One-paragraph risk posture.
+
+## Findings
+Group by OWASP category or threat domain. For each finding:
+**[SEVERITY] Title** — file:line if applicable
+Description of the vulnerability, attack scenario, and remediation.
+
+## Remediation Plan
+Prioritized list: fix in this sprint / fix this quarter / track as debt.
+
+## Compliance Notes (if applicable)
+Any observations relevant to SOC2, GDPR, PCI-DSS, HIPAA."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

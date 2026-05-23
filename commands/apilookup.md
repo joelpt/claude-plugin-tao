@@ -12,16 +12,36 @@ Inline API and library research mode (no sub-agent). Finds official documentatio
 
 No agent needed — run inline with web search tools.
 
-Output this research guidance, then use WebSearch/WebFetch to research the query:
+Research `$ARGUMENTS` using WebSearch/WebFetch. Cover:
+
+1. Official documentation URL and current stable version
+2. Installation / quick-start one-liner
+3. Core usage pattern (the thing you write 80% of the time)
+4. Key functions / classes / methods with signatures
+5. Auth / credentials setup (if applicable)
+6. Common pitfalls or breaking changes to know about
+
+Present findings as a quick-reference card — formatted for skimming, not reading:
 
 ```text
-RESEARCH: <query from $ARGUMENTS>
+# <Library/API Name> — Quick Reference
+Version: <N.N.N> | Docs: <url>
 
-1. Identify official documentation site
-2. Verify current version and check for breaking changes
-3. Search for: "<query> official documentation", "<query> latest examples <current-year>"
-4. Locate: installation, quick start, API reference, common patterns
-5. Capture: core concepts, key functions, auth requirements, common pitfalls
+## Install
+<one-liner>
+
+## Core Pattern
+<minimal working example in a code block>
+
+## Key Functions / Endpoints
+| Name | What it does |
+|------|-------------|
+| ...  | ...          |
+
+## Auth Setup (if needed)
+<minimal auth snippet>
+
+## Gotchas
+- <pitfall 1>
+- <pitfall 2>
 ```
-
-Present findings to the user as formatted markdown with code examples where useful.

@@ -23,8 +23,19 @@ Agent(
   prompt="Provide CLI integration guidance.
 
 [If --cli-name: 'Target CLI: <name>']
-[If --prompt or freeform: '<task/goal>']"
+[If --prompt or freeform: '<task/goal>']
+
+Format your response as:
+## Integration Overview
+What the integration achieves and the approach.
+
+## Step-by-Step Setup
+Numbered steps with exact commands in code blocks.
+
+## Example Workflow
+A concrete end-to-end example showing the integration in action.
+
+## Gotchas
+Non-obvious issues, version constraints, or common failure modes to watch for."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

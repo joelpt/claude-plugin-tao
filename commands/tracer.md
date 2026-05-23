@@ -25,8 +25,22 @@ Agent(
 
 [If freeform: 'Entry point / flow: <text>']
 [If --files: 'Codebase files: <paths>']
-[If --focus-areas: 'Focus on: <areas>']"
+[If --focus-areas: 'Focus on: <areas>']
+
+Format your response as:
+## Entry Point
+Where execution begins — function signature, triggering event, or API endpoint.
+
+## Execution Flow
+Step-by-step trace of the call chain. Use a numbered list or ASCII flowchart. For each step: what is called, what data passes through, what side effects occur.
+
+## Key Dependencies
+External services, databases, caches, or modules this flow depends on, with notes on failure modes.
+
+## Data Transformations
+How the primary data object changes shape as it moves through the flow.
+
+## Instrumentation Points
+Where to add logging, metrics, or breakpoints to observe this flow in production or during debugging."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

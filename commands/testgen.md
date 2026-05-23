@@ -24,8 +24,15 @@ Agent(
 
 [If --files: 'Code to test: <paths>']
 [If --focus-areas: 'Focus on: <areas>']
-[If freeform: '<goal/constraints>']"
+[If freeform: '<goal/constraints>']
+
+Format your response as:
+## Test Strategy
+What approach and test categories you're covering and why (unit / integration / e2e, coverage targets, key invariants).
+
+## Test Cases
+Organized by category (Happy Path, Edge Cases, Error Paths, Concurrency/Performance if applicable).
+For each test case: name, setup, action, expected outcome.
+Write actual test code in the project's test framework where you can infer it from the files. Use pseudocode only when the framework is unknown."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

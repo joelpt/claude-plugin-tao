@@ -25,8 +25,21 @@ Agent(
 
 [If --files: 'Relevant files: <paths>']
 [If --focus-areas: 'Focus on: <areas>']
-[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for each reasoning stage. Budget 32,000 thinking tokens per step.']"
+[If --high-effort: 'Extended thinking enabled. Use [[ ultrathink ]] for each reasoning stage. Budget 32,000 thinking tokens per step.']
+
+Format your final response as:
+## Problem Decomposition
+The key sub-problems and constraints you identified.
+
+## Proposed Approach
+Your recommended solution or answer, stated clearly.
+
+## Vetting Concerns
+The strongest objections to your approach and how you addressed them. If the vetting sub-agent found something you couldn't resolve, say so explicitly.
+
+## Recommendation
+Final answer with confidence level: High (I'd stake a production deploy on this) / Medium (solid but watch for X) / Low (best available answer but significant uncertainty remains).
+
+Do not include internal sub-agent dialogue or intermediate JSON in the final response."
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.

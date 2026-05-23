@@ -25,8 +25,14 @@ Agent(
 
 [If --files: 'Files to document: <paths>']
 [If --prompt or freeform: 'Type/goal: <text>']
-[If --focus-areas: 'Focus on: <areas>']"
+[If --focus-areas: 'Focus on: <areas>']
+
+Output the generated documentation directly — no preamble, no wrapper, no 'here is the documentation' intro.
+The output should be ready to copy and paste into the target location.
+Use the format appropriate to the documentation type:
+- Inline docstrings: language-native format (Google style for Python, JSDoc for JS/TS, etc.)
+- README / guides: GitHub-flavored markdown
+- API reference: markdown with consistent method/parameter tables
+- Architecture docs: markdown with mermaid or ASCII diagrams where helpful"
 )
 ```
-
-Present the agent's response directly to the user as formatted markdown.
