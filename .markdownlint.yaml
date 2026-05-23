@@ -1,0 +1,14 @@
+# Markdownlint configuration
+# See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Disable line length check — one-sentence-per-line rule; better for git diffs
+MD013: false
+
+# Allow duplicate headings — common section names like "Output Format" appear in many files
+MD024: false
+
+# Allow code blocks without surrounding blank lines
+MD031: false
+
+# Allow flexible blank lines around lists
+MD030: false

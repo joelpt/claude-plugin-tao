@@ -1,5 +1,9 @@
 # tao plugin — development recipes
 
+# Validate manifest, scripts, and markdown structure
+run: test lint
+    @echo "Plugin is ready."
+
 # Validate all Python scripts parse without errors
 test:
     python3 -m py_compile scripts/llm_call.py
