@@ -20,6 +20,10 @@ smoke:
 version:
     @python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])"
 
+# Show all configured model assignments
+models:
+    python3 scripts/models.py
+
 # Validate all command and agent markdown files have frontmatter
 lint:
     #!/usr/bin/env python3
