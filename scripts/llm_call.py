@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Multi-provider LLM caller for tao consensus/challenge modes.
+"""Multi-provider LLM caller for tao consensus/challenge modes.
+
 Reads prompt from stdin, writes response to stdout.
 
 Usage (explicit provider):
@@ -28,12 +28,21 @@ import re
 import subprocess
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
+from pathlib import Path
 
 
 def _version_key(v: str) -> tuple[int, ...]:
-    """Return a numeric tuple for semver-safe sorting of version directory names."""
+    """Return a numeric tuple for semver-safe sorting of version directory names.
+
+    Args:
+        v: Version string such as "1.2.3" or "v2.0.1-beta".
+
+    Returns:
+        Tuple of integers extracted from the version string, suitable for
+        comparison with the builtin `sorted` key parameter.
+    """
     return tuple(int(x) for x in re.split(r"[.\-]", v.lstrip("v")) if x.isdigit())
 
 
@@ -48,6 +57,9 @@ def _urlopen(
         req: The request to open.
         timeout: Socket timeout in seconds.
         _retries: If provided, the number of retries performed is appended on success.
+
+    Returns:
+        The HTTP response object from the successful request.
     """
     for attempt in range(9):
         try:
@@ -99,7 +111,17 @@ def _emit_stats(
 
 
 def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
-    """Call Google Gemini generateContent API and return the response text."""
+    """Call Google Gemini generateContent API and return the response text.
+
+    Args:
+        prompt: User message to send.
+        model: Gemini model identifier; defaults to "gemini-2.5-pro".
+        system: Optional system instruction text.
+        max_tokens: Maximum output tokens to request.
+
+    Returns:
+        The text content from the first candidate's first part.
+    """
     model = model or "gemini-2.5-pro"
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -150,18 +172,28 @@ def call_gemini(prompt: str, model: str | None, system: str | None, max_tokens: 
 
 
 def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
-    """Call the xAI OpenAI-compatible API and return the response message content."""
+    """Call the xAI OpenAI-compatible API and return the response message content.
+
+    Args:
+        prompt: User message to send.
+        model: xAI model identifier; defaults to "grok-4.3".
+        system: Optional system prompt text.
+        max_tokens: Maximum output tokens to request.
+
+    Returns:
+        The content string from the first response choice.
+    """
     model = model or "grok-4.3"
     api_key = os.environ.get("XAI_API_KEY")
     if not api_key:
         raise RuntimeError("XAI_API_KEY not set in environment")
 
-    messages = []
+    messages: list[dict[str, str]] = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
-    body = {"model": model, "messages": messages, "max_tokens": max_tokens}
+    body: dict[str, object] = {"model": model, "messages": messages, "max_tokens": max_tokens}
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         "https://api.x.ai/v1/chat/completions",
@@ -180,7 +212,7 @@ def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int
     choices = result.get("choices") or []
     if not choices:
         raise RuntimeError(f"xAI returned no choices (full response: {result})")
-    content = choices[0]["message"]["content"]
+    content: str = choices[0]["message"]["content"]
     usage = result.get("usage") or {}
     tok_in = usage.get("prompt_tokens", "?")
     tok_out = usage.get("completion_tokens", "?")
@@ -190,9 +222,19 @@ def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int
 
 
 def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
-    """Call the local Ollama /api/chat endpoint and return the assistant message content."""
+    """Call the local Ollama /api/chat endpoint and return the assistant message content.
+
+    Args:
+        prompt: User message to send.
+        model: Ollama model identifier; defaults to "qwen3:32b".
+        system: Optional system prompt text.
+        max_tokens: Maximum output tokens for the response (thinking overhead added automatically).
+
+    Returns:
+        The assistant message content, or thinking content if content is empty.
+    """
     model = model or "qwen3:32b"
-    messages = []
+    messages: list[dict[str, str]] = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
@@ -220,8 +262,14 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     # Generous timeout — first call may load the model from disk
     _retries: list[int] = []
     t0 = time.monotonic()
-    with _urlopen(req, timeout=300, _retries=_retries) as resp:
-        result = json.loads(resp.read())
+    try:
+        with _urlopen(req, timeout=300, _retries=_retries) as resp:
+            result = json.loads(resp.read())
+    except urllib.error.URLError as e:
+        raise RuntimeError(
+            f"Ollama not reachable at localhost:11434 ({e.reason}). "
+            "Run: ollama serve"
+        ) from e
     elapsed = time.monotonic() - t0
 
     error_msg = result.get("error")
@@ -247,28 +295,37 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
 
 
 def call_codex(prompt: str, model: str | None, system: str | None, _max_tokens: int) -> str:
-    """Invoke the Codex CLI companion script and return its stdout."""
-    # Codex CLI controls depth via --effort, not a token limit
+    """Invoke the Codex CLI companion script and return its stdout.
+
+    Args:
+        prompt: User message to send as the Codex task.
+        model: Optional model identifier forwarded to the Codex CLI.
+        system: Optional system instruction prepended to the task string.
+        _max_tokens: Unused — Codex CLI controls depth via --effort, not token limit.
+
+    Returns:
+        The stripped stdout output from the Codex CLI companion.
+    """
     # Locate the latest installed Codex CLI companion script
-    cache = os.path.expanduser("~/.claude/plugins/cache/openai-codex/codex")
-    if not os.path.isdir(cache):
+    cache = Path.home() / ".claude" / "plugins" / "cache" / "openai-codex" / "codex"
+    if not cache.is_dir():
         raise RuntimeError(
             "Codex plugin not installed. Run: claude plugin install codex@openai-codex"
         )
     versions = sorted(
-        (v for v in os.listdir(cache) if os.path.isdir(os.path.join(cache, v))),
+        (v.name for v in cache.iterdir() if v.is_dir()),
         key=_version_key,
     )
     if not versions:
         raise RuntimeError("No Codex plugin version found in cache.")
-    companion = os.path.join(cache, versions[-1], "scripts", "codex-companion.mjs")
-    if not os.path.exists(companion):
+    companion = cache / versions[-1] / "scripts" / "codex-companion.mjs"
+    if not companion.exists():
         raise RuntimeError(f"Codex companion not found at: {companion}")
 
     # Combine system prompt with user message — Codex `task` takes a single task string
     task = f"{system}\n\n{prompt}" if system else prompt
 
-    cmd = ["node", companion, "task", task]
+    cmd = ["node", str(companion), "task", task]
     if model:
         cmd += ["--model", model]
 
@@ -294,30 +351,45 @@ def call_codex(prompt: str, model: str | None, system: str | None, _max_tokens: 
 
 
 def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | None]:
-    """Resolve a dot-separated role path (e.g. 'consensus.critic') against models.json."""
+    """Resolve a dot-separated role path against models.json and return provider and model.
+
+    Args:
+        config_path: Filesystem path to the models.json config file.
+        role_path: Dot-separated key path into the config (e.g. "consensus.critic").
+
+    Returns:
+        A tuple of (provider, model) where model may be None if not specified in config.
+    """
     with open(config_path) as f:
-        config = json.load(f)
+        config: dict[str, object] = json.load(f)
     parts = role_path.split(".")
-    node = config
+    # Walk the config tree; narrowed to dict at each step before subscripting.
+    node: dict[str, object] = config
     for part in parts:
         if part.startswith("_"):
             raise RuntimeError(
                 f"Role '{role_path}' references metadata key '{part}' — check role path spelling"
             )
-        if isinstance(node, dict) and part in node:
-            node = node[part]
-        else:
+        raw = node.get(part)
+        if raw is None:
             raise RuntimeError(
                 f"Role '{role_path}' not found in config {config_path} (missing '{part}')"
             )
-    if not isinstance(node, dict) or "provider" not in node:
+        if not isinstance(raw, dict):
+            raise RuntimeError(
+                f"Role '{role_path}': expected a dict at '{part}', got {type(raw).__name__}"
+            )
+        node = raw
+    if "provider" not in node:
         raise RuntimeError(
             f"Role '{role_path}' has no 'provider' key in config {config_path}"
         )
-    provider: str = node["provider"]
-    model: str | None = node.get("model")
+    provider = str(node["provider"])
+    raw_model = node.get("model")
+    model: str | None = str(raw_model) if raw_model is not None else None
     if model is None and provider == "ollama":
-        model = config.get("_default_local_model")
+        default = config.get("_default_local_model")
+        model = str(default) if default is not None else None
     return provider, model
 
 
@@ -334,8 +406,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    provider = args.provider
-    model = args.model
+    provider: str | None = args.provider
+    model: str | None = args.model
 
     if args.role and not args.config:
         print("WARNING: --role requires --config; --role ignored", file=sys.stderr)
@@ -343,13 +415,13 @@ def main() -> None:
     if args.config and args.role:
         try:
             cfg_provider, cfg_model = resolve_config_role(args.config, args.role)
+            if not provider:
+                provider = cfg_provider
+            if model is None:
+                model = cfg_model
         except Exception as cfg_err:
             print(f"ERROR (config): {cfg_err}", file=sys.stderr)
             sys.exit(1)
-        if not provider:
-            provider = cfg_provider
-        if model is None:
-            model = cfg_model
 
     if not provider:
         print("ERROR: --provider is required (or use --config + --role)", file=sys.stderr)
@@ -361,7 +433,7 @@ def main() -> None:
         sys.exit(1)
 
     # Apply default models when none specified
-    defaults = {"gemini": "gemini-2.5-pro", "xai": "grok-4.3", "ollama": "qwen3:32b"}
+    defaults: dict[str, str] = {"gemini": "gemini-2.5-pro", "xai": "grok-4.3", "ollama": "qwen3:32b"}
     if model is None and provider in defaults:
         model = defaults[provider]
 
