@@ -35,8 +35,8 @@ When the user invokes `/tao <mode>`, dispatch to the appropriate agent or handle
 | planner | `tao:task-planner` | opus | Structured task planning with phases |
 | think | `tao:thinker` | opus | Deep reasoning with rigorous vetting via sub-agents |
 | vet | `tao:proposal-vetting-judge` | opus | Multi-perspective proposal vetting and validation |
-| challenge | `tao:challenge-assessor` + Grok | sonnet + external | Evidence-based challenge + adversarial external voice |
-| skeptic | `tao:senior-skeptic-reviewer` + Grok | opus + external | Constructive skepticism + sharp external critic |
+| challenge | `tao:challenge-assessor` + Grok + Ollama | sonnet + 2 external | 3-voice adversarial challenge (Claude + Grok + Ollama) |
+| skeptic | `tao:senior-skeptic-reviewer` + Grok + Ollama | opus + 2 external | 3-voice constructive skepticism (Claude + Grok + Ollama) |
 | requirements | `tao:requirements-architect` | sonnet | Requirements discovery and technical translation |
 | synthesize | `tao:perspective-synthesizer` | sonnet | Reconcile multiple viewpoints into unified strategy |
 | consensus | Claude + Grok + Codex + Ollama | opus + 3 external | 4-voice multi-LLM decision analysis (see /tao:consensus) |
