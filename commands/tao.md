@@ -84,7 +84,7 @@ When using natural language, the entire text after the mode name is passed as th
 
 For most modes, invoke the Agent tool like this:
 
-```
+```text
 Agent(
   subagent_type="tao:<agent-name>",
   model="<model-tier>",
@@ -93,6 +93,7 @@ Agent(
 ```
 
 Include in the agent prompt:
+
 1. The mode-specific arguments (issue, problem, files, etc.)
 2. Whether high-effort/thinking mode is enabled (add ultrathink instruction if so)
 3. Any file paths the agent should read using Read/Grep tools
@@ -118,11 +119,13 @@ CONFIG="$SCRIPTS/../config/models.json"
 **Dispatch 3 voices in ONE message** (parallel tool calls):
 
 For **challenge** mode:
+
 - Claude (Agent): `Agent(subagent_type="tao:challenge-assessor", model="sonnet", prompt="Challenge this: <statement>")`
 - Grok (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.challenger --system="Challenge this statement aggressively. Find every flaw, assumption, and risk. Be direct." --max-tokens=4096`
 - Ollama (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.local --system="Challenge this statement. Identify every assumption, risk, and flaw. Be direct and specific." --max-tokens=8192`
 
 For **skeptic** mode:
+
 - Claude (Agent): `Agent(subagent_type="tao:senior-skeptic-reviewer", model="opus", prompt="Review skeptically: <proposal>")`
 - Grok (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.challenger --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" --max-tokens=4096`
 - Ollama (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.local --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." --max-tokens=8192`
@@ -167,9 +170,10 @@ If a voice was unavailable, omit its row or mark all cells `unavailable`.
 ### Inline Modes (No Agent Needed)
 
 #### apilookup mode
+
 Output this research guidance, then use web search tools to research the query:
 
-```
+```text
 RESEARCH GUIDANCE for: <query>
 
 1. Identify official documentation site
@@ -194,9 +198,12 @@ When `--high-effort` (or `--thinking`) is specified:
 - Most modes use the Claude Max subscription (free tier) — no external cost or API tokens consumed.
 - `context: fork` in this file's frontmatter runs the entire tao invocation in an isolated subcontext — intermediate reasoning and agent chatter never accumulate in your main conversation window.
 - Consensus, challenge, and skeptic modes use external models with graceful degradation if unavailable.
-- Required for full multi-LLM functionality:
+- Required for full multi-LLM functionality (defaults — all swappable in `config/models.json`):
   - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (consensus critic + challenge/skeptic challenger)
-  - Codex plugin installed + OpenAI subscription — consensus analyst voice
-  - Ollama: `ollama pull deepseek-r1:70b` then `ollama serve` — local voice for consensus + challenge + skeptic
+  - Codex plugin installed + OpenAI subscription — consensus analyst voice; swap to `openai` provider if preferred
+  - Ollama: `ollama pull deepseek-r1:70b` then `ollama serve` — local voice; swap to `groq` provider for fast cloud inference without GPU
+  - `OPENAI_API_KEY` in `~/.zshenv` — optional; enables `openai` provider (gpt-4o default)
+  - `GROQ_API_KEY` in `~/.zshenv` — optional; enables `groq` provider (llama-3.3-70b-versatile default, very fast)
+  - `GEMINI_API_KEY` in `~/.zshenv` — optional; enables `gemini` provider (gemini-2.5-pro default)
 - Default local model is set by `"_default_local_model"` in `config/models.json` — change it there to use a different Ollama model across all modes simultaneously.
 - All other model assignments are configurable in `config/models.json` — no command files need editing.
