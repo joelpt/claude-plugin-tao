@@ -1,5 +1,5 @@
 {
-  "_comment": "Tao model configuration. Edit to swap providers/models for each role.",
+  "_comment": "Tao model configuration. Edit to swap providers/models for each role. Examples: swap consensus.local to {provider:groq,model:llama-3.3-70b-versatile} for fast cloud inference without Ollama; swap consensus.analyst to {provider:openai,model:gpt-4o} for direct GPT instead of Codex CLI.",
   "_default_local_model": "qwen3:32b",
   "_providers": {
     "claude": "Claude Max subscription — free. No key needed.",
