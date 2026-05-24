@@ -4,7 +4,7 @@
 Reads prompt from stdin, writes response to stdout.
 
 Usage (explicit provider):
-  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|openai|ollama|codex> [--model=<name>]
+  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|openai|groq|ollama|codex> [--model=<name>]
       [--system=<text>] [--max-tokens=<int>]
 
 Usage (config-based role):
@@ -16,6 +16,7 @@ API keys (from ~/.zshenv — never hardcoded):
   GEMINI_API_KEY  — Google Gemini (generativelanguage API v1beta)
   XAI_API_KEY     — xAI Grok (OpenAI-compatible endpoint at api.x.ai)
   OPENAI_API_KEY  — OpenAI direct (api.openai.com). Default model: gpt-4o.
+  GROQ_API_KEY    — Groq LPU inference (api.groq.com). Default model: llama-3.3-70b-versatile.
   (Codex uses the OpenAI Codex CLI companion — no key var needed here)
   (Ollama needs no key — local endpoint at localhost:11434)
 """
@@ -94,7 +95,7 @@ def _emit_stats(
     """Print a machine-parseable stats line to stderr for tao run summaries.
 
     Args:
-        provider: Provider name (gemini, xai, openai, ollama, codex).
+        provider: Provider name (gemini, xai, openai, groq, ollama, codex).
         model: Model identifier string.
         tok_in: Input token count, or "?" if unavailable.
         tok_out: Output token count, or "?" if unavailable.
@@ -280,6 +281,59 @@ def call_openai(prompt: str, model: str | None, system: str | None, max_tokens: 
     return content
 
 
+def call_groq(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
+    """Call the Groq LPU inference API and return the response message content.
+
+    Args:
+        prompt: User message to send.
+        model: Groq model identifier; defaults to "llama-3.3-70b-versatile".
+        system: Optional system prompt text.
+        max_tokens: Maximum output tokens to request.
+
+    Returns:
+        The content string from the first response choice.
+    """
+    model = model or "llama-3.3-70b-versatile"
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not set in environment")
+
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    body: dict[str, object] = {"model": model, "messages": messages, "max_tokens": max_tokens}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    with _urlopen(req, timeout=120, _retries=_retries) as resp:
+        result = json.loads(resp.read())
+    elapsed = time.monotonic() - t0
+
+    choices = result.get("choices") or []
+    if not choices:
+        raise RuntimeError(f"Groq returned no choices (full response: {result})")
+    content: str | None = choices[0]["message"].get("content")
+    if content is None:
+        finish = choices[0].get("finish_reason", "UNKNOWN")
+        raise RuntimeError(f"Groq returned null content (finish_reason={finish})")
+    usage = result.get("usage") or {}
+    tok_in = usage.get("prompt_tokens", "?")
+    tok_out = usage.get("completion_tokens", "?")
+    tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
+    _emit_stats("groq", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
+    return content
+
+
 def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
     """Call the local Ollama /api/chat endpoint and return the assistant message content.
 
@@ -455,7 +509,7 @@ def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | No
 def main() -> None:
     """Parse arguments, read prompt from stdin, dispatch to the selected provider."""
     parser = argparse.ArgumentParser(description="Call an external LLM provider")
-    parser.add_argument("--provider", help="Provider: gemini | xai | openai | ollama | codex")
+    parser.add_argument("--provider", help="Provider: gemini | xai | openai | groq | ollama | codex")
     parser.add_argument("--model", default=None, help="Model identifier (overrides config)")
     parser.add_argument("--system", default=None, help="System prompt")
     parser.add_argument("--max-tokens", type=int, default=8192)
@@ -496,6 +550,7 @@ def main() -> None:
         "gemini": "gemini-2.5-pro",
         "xai": "grok-4.3",
         "openai": "gpt-4o",
+        "groq": "llama-3.3-70b-versatile",
         "ollama": "qwen3:32b",
     }
     if model is None and provider in defaults:
@@ -508,6 +563,8 @@ def main() -> None:
             response = call_xai(prompt, model, args.system, args.max_tokens)
         elif provider == "openai":
             response = call_openai(prompt, model, args.system, args.max_tokens)
+        elif provider == "groq":
+            response = call_groq(prompt, model, args.system, args.max_tokens)
         elif provider == "ollama":
             response = call_ollama(prompt, model, args.system, args.max_tokens)
         elif provider == "codex":

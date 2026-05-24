@@ -59,6 +59,9 @@ echo 'export XAI_API_KEY=<your-key>' >> ~/.zshenv
 # OpenAI direct (alternative to Codex CLI for GPT analyst voice)
 echo 'export OPENAI_API_KEY=<your-key>' >> ~/.zshenv
 
+# Groq LPU inference (very fast; alternative to Ollama for local-fast voice)
+echo 'export GROQ_API_KEY=<your-key>' >> ~/.zshenv
+
 # Ollama local voice
 ollama pull qwen3:32b && ollama serve
 
@@ -87,7 +90,7 @@ Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token bu
 .claude-plugin/plugin.json   ← manifest (name, version, description)
 commands/                    ← slash command definitions (one per mode)
 agents/                      ← subagent definitions (dispatched by commands)
-scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Gemini, Ollama, Codex)
+scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Ollama, Codex)
 config/models.json           ← model assignments per role (edit to swap providers)
 ```
 

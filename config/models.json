@@ -5,6 +5,7 @@
     "claude": "Claude Max subscription — free. No key needed.",
     "xai": "XAI_API_KEY in ~/.zshenv — api.x.ai direct.",
     "openai": "OPENAI_API_KEY in ~/.zshenv — OpenAI direct. Per-token cost. Default model: gpt-4o.",
+    "groq": "GROQ_API_KEY in ~/.zshenv — Groq LPU inference, very fast. Per-token cost. Default model: llama-3.3-70b-versatile.",
     "codex": "Codex CLI companion — OpenAI subscription quota, no per-token cost. Requires codex plugin.",
     "ollama": "Local inference, no cloud cost. ollama pull deepseek-r1:70b && ollama serve",
     "gemini": "GEMINI_API_KEY in ~/.zshenv — Google direct. Per-token cost."
