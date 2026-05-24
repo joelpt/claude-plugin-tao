@@ -32,6 +32,7 @@ Consider and address:
 ## Output Format
 
 Structure your response as:
+
 1. **Executive Summary** - 2-3 sentence case for this approach
 2. **Key Arguments** - Detailed supporting arguments (3-5)
 3. **Evidence & Examples** - Concrete evidence supporting each argument

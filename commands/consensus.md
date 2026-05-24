@@ -10,6 +10,7 @@ context: fork
 Runs all voices in parallel for epistemic diversity, then synthesizes into a recommendation.
 
 Voices:
+
 - **Claude Opus** (advocate) — argues FOR. Free via Claude Max.
 - **Grok 4.3** (critic) — argues AGAINST. xAI direct API.
 - **Codex/GPT** (analyst) — neutral balanced analysis. OpenAI Codex CLI (subscription quota).
@@ -30,6 +31,7 @@ CONFIG="$SCRIPTS/../config/models.json"
 The question/decision is everything in `$ARGUMENTS` after stripping any flags.
 
 Recognized flags:
+
 - `--high-effort` → use 16384 max_tokens for external calls and include `[[ ultrathink ]]` in Claude prompts
 
 ## Step 2 — Dispatch all 4 voices in ONE message (parallel)
@@ -37,7 +39,7 @@ Recognized flags:
 Run these 4 tool calls simultaneously:
 
 **Voice 1 — Claude Advocate** (Agent tool):
-```
+```text
 Agent(
   subagent_type="tao:consensus-advocate",
   model="opus",

@@ -10,6 +10,7 @@ context: fork
 Runs Claude, Grok, and Ollama in parallel — each independently reviews the proposal as a senior skeptic.
 
 Voices:
+
 - **Claude Opus** (primary skeptic) — constructive skepticism grounded in the codebase and evidence
 - **Grok 4.3** (external sharp critic) — what would you reject outright? What could go wrong?
 - **Ollama** (local) — independent local perspective, model set by `_default_local_model` in `config/models.json`
@@ -26,6 +27,7 @@ CONFIG="$SCRIPTS/../config/models.json"
 The proposal is everything in `$ARGUMENTS` after stripping flags.
 
 Recognized flags:
+
 - `--high-effort` → use 16384 max_tokens for external calls and include `[[ ultrathink ]]` in Claude prompt
 
 ## Step 2 — Dispatch all 3 voices in ONE message (parallel)

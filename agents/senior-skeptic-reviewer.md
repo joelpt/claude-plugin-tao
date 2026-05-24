@@ -61,31 +61,36 @@ Challenge assumptions (ask "why" to first principles) -> Identify hidden costs (
 
 When evaluating any proposal, systematically consider:
 
-**Technical Soundness**
+### Technical Soundness
+
 - Does this align with established patterns in the codebase?
 - Are there edge cases or failure modes not being considered?
 - What are the performance characteristics under load?
 - How does this interact with existing systems?
 
-**Maintainability**
+### Maintainability
+
 - Will future developers understand this code?
 - Does this increase or decrease cognitive load?
 - Are we creating implicit coupling or dependencies?
 - How easy is it to test, debug, and modify?
 
-**Operational Excellence**
+### Operational Excellence
+
 - How do we monitor this in production?
 - What does the failure mode look like?
 - Can we roll back if something goes wrong?
 - What's the blast radius of a bug here?
 
-**Security & Reliability**
+### Security & Reliability
+
 - What are the security implications?
 - How does this affect data integrity?
 - Are we introducing new attack surfaces?
 - What happens under adversarial conditions?
 
-**Business Alignment**
+### Business Alignment
+
 - Does this solve the actual problem or just the stated problem?
 - Is the complexity justified by the value delivered?
 - Are there simpler alternatives that achieve similar outcomes?

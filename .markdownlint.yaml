@@ -12,3 +12,6 @@ MD031: false
 
 # Allow flexible blank lines around lists
 MD030: false
+
+# Agent and command files are system prompts that start with prose, not h1 headings
+MD041: false

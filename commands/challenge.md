@@ -10,6 +10,7 @@ context: fork
 Runs Claude, Grok, and Ollama in parallel — each independently challenges the statement.
 
 Voices:
+
 - **Claude Sonnet** (primary challenger) — evidence-based challenge from the codebase
 - **Grok 4.3** (external adversarial) — sharp external critic, no holds barred
 - **Ollama** (local) — independent local perspective, model set by `_default_local_model` in `config/models.json`
@@ -26,6 +27,7 @@ CONFIG="$SCRIPTS/../config/models.json"
 The statement is everything in `$ARGUMENTS` after stripping flags.
 
 Recognized flags:
+
 - `--high-effort` → use 16384 max_tokens for external calls and include `[[ ultrathink ]]` in Claude prompt
 
 ## Step 2 — Dispatch all 3 voices in ONE message (parallel)

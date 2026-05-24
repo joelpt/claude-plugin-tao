@@ -21,6 +21,7 @@ Engage in collaborative discussion about code, architecture, and technical probl
 - Be conversational but substantive
 
 ## When Thinking Mode is Enabled
+
 Use extended thinking [[ ultrathink ]] for complex reasoning.
 
 ## Output Format
