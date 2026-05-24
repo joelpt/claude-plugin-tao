@@ -4,7 +4,7 @@
 Reads prompt from stdin, writes response to stdout.
 
 Usage (explicit provider):
-  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|ollama|codex> [--model=<name>]
+  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|openai|ollama|codex> [--model=<name>]
       [--system=<text>] [--max-tokens=<int>]
 
 Usage (config-based role):
@@ -15,6 +15,7 @@ Usage (config-based role):
 API keys (from ~/.zshenv — never hardcoded):
   GEMINI_API_KEY  — Google Gemini (generativelanguage API v1beta)
   XAI_API_KEY     — xAI Grok (OpenAI-compatible endpoint at api.x.ai)
+  OPENAI_API_KEY  — OpenAI direct (api.openai.com). Default model: gpt-4o.
   (Codex uses the OpenAI Codex CLI companion — no key var needed here)
   (Ollama needs no key — local endpoint at localhost:11434)
 """
@@ -51,7 +52,7 @@ def _urlopen(
     timeout: int,
     _retries: list[int] | None = None,
 ) -> http.client.HTTPResponse:
-    """Open a URL request, retrying up to 8 times on 529 with exponential backoff.
+    """Open a URL request, retrying up to 8 times on 429/529 with exponential backoff.
 
     Args:
         req: The request to open.
@@ -68,10 +69,11 @@ def _urlopen(
                 _retries.append(attempt)
             return response
         except urllib.error.HTTPError as e:
-            if e.code == 529 and attempt < 8:
+            # 529 = Anthropic overloaded; 429 = rate-limited (OpenAI, xAI, Gemini, most APIs).
+            if e.code in (429, 529) and attempt < 8:
                 delay = min(2**attempt + random.uniform(0, 1), 60)
                 print(
-                    f"[529 overloaded] retrying in {delay:.1f}s (attempt {attempt + 1}/8)…",
+                    f"[HTTP {e.code}] retrying in {delay:.1f}s (attempt {attempt + 1}/8)…",
                     file=sys.stderr,
                 )
                 time.sleep(delay)
@@ -92,7 +94,7 @@ def _emit_stats(
     """Print a machine-parseable stats line to stderr for tao run summaries.
 
     Args:
-        provider: Provider name (gemini, xai, ollama, codex).
+        provider: Provider name (gemini, xai, openai, ollama, codex).
         model: Model identifier string.
         tok_in: Input token count, or "?" if unavailable.
         tok_out: Output token count, or "?" if unavailable.
@@ -212,12 +214,69 @@ def call_xai(prompt: str, model: str | None, system: str | None, max_tokens: int
     choices = result.get("choices") or []
     if not choices:
         raise RuntimeError(f"xAI returned no choices (full response: {result})")
-    content: str = choices[0]["message"]["content"]
+    content: str | None = choices[0]["message"].get("content")
+    if content is None:
+        finish = choices[0].get("finish_reason", "UNKNOWN")
+        raise RuntimeError(f"xAI returned null content (finish_reason={finish})")
     usage = result.get("usage") or {}
     tok_in = usage.get("prompt_tokens", "?")
     tok_out = usage.get("completion_tokens", "?")
     tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
     _emit_stats("xai", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
+    return content
+
+
+def call_openai(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
+    """Call the OpenAI chat completions API and return the response message content.
+
+    Args:
+        prompt: User message to send.
+        model: OpenAI model identifier; defaults to "gpt-4o".
+        system: Optional system prompt text.
+        max_tokens: Maximum output tokens to request.
+
+    Returns:
+        The content string from the first response choice.
+    """
+    model = model or "gpt-4o"
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set in environment")
+
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    # max_completion_tokens is required for o-series and gpt-5+ (max_tokens is rejected).
+    body: dict[str, object] = {"model": model, "messages": messages, "max_completion_tokens": max_tokens}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    with _urlopen(req, timeout=120, _retries=_retries) as resp:
+        result = json.loads(resp.read())
+    elapsed = time.monotonic() - t0
+
+    choices = result.get("choices") or []
+    if not choices:
+        raise RuntimeError(f"OpenAI returned no choices (full response: {result})")
+    content: str | None = choices[0]["message"].get("content")
+    if content is None:
+        finish = choices[0].get("finish_reason", "UNKNOWN")
+        raise RuntimeError(f"OpenAI returned null content (finish_reason={finish})")
+    usage = result.get("usage") or {}
+    tok_in = usage.get("prompt_tokens", "?")
+    tok_out = usage.get("completion_tokens", "?")
+    tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
+    _emit_stats("openai", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
     return content
 
 
@@ -396,7 +455,7 @@ def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | No
 def main() -> None:
     """Parse arguments, read prompt from stdin, dispatch to the selected provider."""
     parser = argparse.ArgumentParser(description="Call an external LLM provider")
-    parser.add_argument("--provider", help="Provider: gemini | xai | ollama | codex")
+    parser.add_argument("--provider", help="Provider: gemini | xai | openai | ollama | codex")
     parser.add_argument("--model", default=None, help="Model identifier (overrides config)")
     parser.add_argument("--system", default=None, help="System prompt")
     parser.add_argument("--max-tokens", type=int, default=8192)
@@ -433,7 +492,12 @@ def main() -> None:
         sys.exit(1)
 
     # Apply default models when none specified
-    defaults: dict[str, str] = {"gemini": "gemini-2.5-pro", "xai": "grok-4.3", "ollama": "qwen3:32b"}
+    defaults: dict[str, str] = {
+        "gemini": "gemini-2.5-pro",
+        "xai": "grok-4.3",
+        "openai": "gpt-4o",
+        "ollama": "qwen3:32b",
+    }
     if model is None and provider in defaults:
         model = defaults[provider]
 
@@ -442,6 +506,8 @@ def main() -> None:
             response = call_gemini(prompt, model, args.system, args.max_tokens)
         elif provider == "xai":
             response = call_xai(prompt, model, args.system, args.max_tokens)
+        elif provider == "openai":
+            response = call_openai(prompt, model, args.system, args.max_tokens)
         elif provider == "ollama":
             response = call_ollama(prompt, model, args.system, args.max_tokens)
         elif provider == "codex":

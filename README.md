@@ -56,10 +56,13 @@ Multi-LLM modes degrade gracefully — if an external voice is unavailable, tao 
 # xAI Grok (consensus critic, challenge/skeptic challenger)
 echo 'export XAI_API_KEY=<your-key>' >> ~/.zshenv
 
+# OpenAI direct (alternative to Codex CLI for GPT analyst voice)
+echo 'export OPENAI_API_KEY=<your-key>' >> ~/.zshenv
+
 # Ollama local voice
 ollama pull qwen3:32b && ollama serve
 
-# Codex/GPT analyst voice
+# Codex/GPT analyst voice (OpenAI subscription, no per-token cost)
 claude plugin install codex@openai-codex
 ```
 
@@ -84,7 +87,7 @@ Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token bu
 .claude-plugin/plugin.json   ← manifest (name, version, description)
 commands/                    ← slash command definitions (one per mode)
 agents/                      ← subagent definitions (dispatched by commands)
-scripts/llm_call.py          ← multi-provider LLM caller (Grok, Ollama, Codex)
+scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Gemini, Ollama, Codex)
 config/models.json           ← model assignments per role (edit to swap providers)
 ```
 
