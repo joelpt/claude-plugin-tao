@@ -127,12 +127,16 @@ Structure your response as follows:
 
 ### Perspective Analysis
 
-[For each input perspective, provide:
+The caller runs in a forked context and sees ONLY this output — they never saw the raw perspectives you received.
+This section is therefore mandatory and must be self-contained: define every perspective in full here so that no later section references a viewpoint the reader has not been shown.
+For each input perspective, provide (target 20–400 words per perspective — err verbose; a few extra tokens beat a downstream misinterpretation):
 
 - Core argument and intent
 - Key strengths
 - Limitations or concerns
-- Underlying assumptions]
+- Underlying assumptions
+
+Never let a later section ("the second approach", "the rejected option") reference a perspective that was not defined here.
 
 ### Synergies and Opportunities
 

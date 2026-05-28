@@ -39,6 +39,7 @@ All modes are available as `/tao <mode> <args>` or as dedicated `/tao:<mode> <ar
 | `chat` | Sonnet | Collaborative discussion and brainstorming |
 | `clink` | Sonnet | CLI integration and bridging guidance |
 | `apilookup` | — | API/library quick-reference research |
+| `guru-chat` | Opus ×5 + Sonnet | Roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest), synthesized |
 
 ### Multi-LLM modes (external voices)
 
@@ -80,6 +81,7 @@ Model assignments and the default Ollama model are configurable in `config/model
 /tao consensus should we migrate from REST to GraphQL? --high-effort
 /tao challenge we don't need integration tests for this module
 /tao vet the proposed caching strategy using Redis pub/sub
+/tao guru-chat should this codebase adopt a plugin architecture or stay monolithic?
 ```
 
 Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token budgets (external APIs).

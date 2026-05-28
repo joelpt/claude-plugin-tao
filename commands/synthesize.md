@@ -41,6 +41,8 @@ The synthesized approach that transcends the original options. Be concrete — s
 What you're consciously giving up in this synthesis and why that's the right call.
 
 ## Implementation Path
-First 2–3 concrete steps to move forward on the recommendation."
+First 2–3 concrete steps to move forward on the recommendation.
+
+Self-contained output (mandatory): the caller sees ONLY this response — not this prompt or your reasoning. Define every perspective and option IN FULL (20–400 words each; err verbose) before any conclusion references it. Never report 'X is best / Y was rejected' without first showing the reader what X and Y are."
 )
 ```

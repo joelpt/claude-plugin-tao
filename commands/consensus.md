@@ -95,7 +95,9 @@ Agent(
 ## Ollama Local Voice
 <ollama_response_or_unavailable>
 
-Note any unavailable voices and how that affects confidence."""
+Note any unavailable voices and how that affects confidence.
+
+Self-contained output (mandatory): the caller runs in a forked context and sees ONLY your response — never these four raw voices. Open with a 'Positions Considered' section defining each distinct option/stance the voices argued (20–400 words each; err verbose) before any recommendation references it. Never report 'option X is strongest / Y was rejected' without first showing the reader what X and Y are."""
 )
 ```
 

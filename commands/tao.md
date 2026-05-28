@@ -1,6 +1,6 @@
 ---
 name: tao
-description: "Advanced reasoning workflows routing to optimal Claude model tiers (Opus/Sonnet/Haiku) plus external LLMs (Grok 4.3, Codex/GPT, Ollama qwen3:32b) for consensus and adversarial modes. Usage: /tao <mode> [args]. Modes: thinkdeep, debug, codereview, secaudit, analyze, planner, think, vet, challenge, skeptic, requirements, synthesize, consensus, refactor, precommit, docgen, testgen, tracer, chat, clink, apilookup"
+description: "Advanced reasoning workflows routing to optimal Claude model tiers (Opus/Sonnet/Haiku) plus external LLMs (Grok 4.3, Codex/GPT, Ollama qwen3:32b) for consensus and adversarial modes. Usage: /tao <mode> [args]. Modes: thinkdeep, debug, codereview, secaudit, analyze, planner, think, vet, challenge, skeptic, requirements, synthesize, consensus, guru-chat, refactor, precommit, docgen, testgen, tracer, chat, clink, apilookup"
 context: fork
 ---
 
@@ -40,6 +40,7 @@ When the user invokes `/tao <mode>`, dispatch to the appropriate agent or handle
 | requirements | `tao:requirements-architect` | sonnet | Requirements discovery and technical translation |
 | synthesize | `tao:perspective-synthesizer` | sonnet | Reconcile multiple viewpoints into unified strategy |
 | consensus | Claude + Grok + Codex + Ollama | opus + 3 external | 4-voice multi-LLM decision analysis (see /tao:consensus) |
+| guru-chat | 5 luminary personas + `tao:perspective-synthesizer` | opus personas + sonnet synthesis | Roundtable of industry luminaries, synthesized (see /tao:guru-chat) |
 | refactor | `tao:refactoring-advisor` | sonnet | Code smell detection and refactoring strategy |
 | precommit | `tao:precommit-validator` | sonnet | Git change validation before commit |
 | docgen | `tao:doc-generator` | sonnet | Documentation generation |
@@ -78,6 +79,20 @@ Arguments can be passed in two ways:
 
 When using natural language, the entire text after the mode name is passed as the primary argument to the agent (e.g., as the issue for debug, statement for challenge, problem for think/thinkdeep, proposal for vet, etc.).
 
+## Self-Contained Output Contract (ALL modes)
+
+This contract is non-negotiable and applies to every mode below, including the synthesis step of the multi-voice modes.
+
+`context: fork` means the user sees ONLY the final returned text — never the forked subcontext, the agent chatter, or the intermediate reasoning where options were generated and labeled.
+All of that is discarded at the fork boundary, so the returned text must stand entirely on its own.
+
+Rule (mechanical, self-checkable): any label, shorthand, or back-reference used in a conclusion — e.g. "Option A", "the second proposal", "Voice 2's position", "approach #3", "the rejected design" — MUST be defined in the same output, in a section that *precedes* the conclusion.
+If internal labels were used while reasoning, restate each labeled item in full at its first user-facing mention.
+
+Before returning, run this check: *could a reader who saw nothing but this single message understand every option, voice, or finding referenced in the conclusion?*
+If not, add an "Options/Positions Considered" section that defines each one (target 20–400 words per item — err verbose; a few extra tokens beats a downstream misinterpretation) before stating the conclusion.
+Never report "X is strongest, Y was rejected" without the reader having first been shown what X and Y actually are.
+
 ## Dispatch Instructions
 
 ### Standard Modes (Single Agent)
@@ -105,6 +120,12 @@ Include in the agent prompt:
 **Preferred invocation: `/tao:consensus`** — the standalone command in `commands/consensus.md` contains the full 4-voice parallel dispatch logic (Claude Opus advocate + Grok 4.3 critic + Codex/GPT analyst + Ollama local).
 
 When `/tao consensus` is invoked (mode argument rather than dedicated command): forward to the same logic. Resolve paths and dispatch as documented in `commands/consensus.md`. Model assignments are in `config/models.json`.
+
+### Guru-Chat Mode
+
+**Preferred invocation: `/tao:guru-chat`** — the standalone command in `commands/guru-chat.md` contains the full roundtable logic (five luminary personas, team-based discussion with graceful fallback to parallel subagents, then synthesis via `tao:perspective-synthesizer`).
+
+When `/tao guru-chat` is invoked (mode argument rather than dedicated command): forward to the same logic documented in `commands/guru-chat.md`.
 
 ### Challenge and Skeptic Modes (Claude + Grok + Ollama Parallel)
 

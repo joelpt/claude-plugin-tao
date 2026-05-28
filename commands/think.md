@@ -40,6 +40,6 @@ The strongest objections to your approach and how you addressed them. If the vet
 ## Recommendation
 Final answer with confidence level: High (I'd stake a production deploy on this) / Medium (solid but watch for X) / Low (best available answer but significant uncertainty remains).
 
-Do not include internal sub-agent dialogue or intermediate JSON in the final response."
+Self-contained output (mandatory): the caller sees ONLY this response — not this prompt, the sub-agent dialogue, or intermediate JSON. Define every option, alternative, or position IN FULL (20–400 words each; err verbose) before any conclusion references it. Never report 'X is best / Y was rejected' without first showing the reader what X and Y are."
 )
 ```

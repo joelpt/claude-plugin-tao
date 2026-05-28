@@ -127,6 +127,10 @@ When looping back, explicitly state what new insights or concerns are driving th
 
 ## OUTPUT FORMAT
 
+Self-containment is mandatory: the caller runs in a forked context and sees ONLY this response — not the proposal text, the consulted agents' outputs, or your internal reasoning.
+Any option, alternative, or proposal you reference in a conclusion MUST be defined earlier in this same response (target 20–400 words per item — err verbose; a few extra tokens beat a downstream misinterpretation).
+Never write "the third alternative was rejected" without the reader having been shown what the alternatives were.
+
 Your final response to the user must include:
 
 1. **Executive Summary**: Clear recommendation (approve, approve with modifications, reject, or request more information)

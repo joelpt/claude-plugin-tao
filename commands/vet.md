@@ -44,6 +44,6 @@ Specific changes needed before this is safe to implement.
 ## Next Steps
 What to do immediately after reading this.
 
-Do not include internal sub-agent dialogue or intermediate JSON in the final response."
+Self-contained output (mandatory): the caller sees ONLY this response — not this prompt, the sub-agent dialogue, or intermediate JSON. Define every option, alternative, or position IN FULL (20–400 words each; err verbose) before any conclusion references it. Never report 'X is best / Y was rejected' without first showing the reader what X and Y are."
 )
 ```

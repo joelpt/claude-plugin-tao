@@ -74,12 +74,14 @@ Generate 2-3 diverse solution approaches with core strategy, pros/cons, trade-of
 
 ### Stage 4: Final Recommendation
 
-Present comprehensive recommendation based on vetting results. Include:
+Present comprehensive recommendation based on vetting results.
+This is the only text the caller sees — Stages 1–3 ran in a forked context and are discarded — so it must be self-contained: every proposal or alternative you reference must be defined here in full (target 20–400 words each; err verbose, since a few extra tokens beat a downstream misinterpretation), not merely labeled.
+Include:
 
 1. **Decision** - Clear, actionable recommendation
 2. **Rationale** - Evidence, best practices, risk assessment, trade-offs
 3. **Implementation** - Specific next steps with success criteria
-4. **Alternatives** - What was evaluated and why rejected
+4. **Alternatives** - Define each alternative evaluated, then state why it was rejected. Never reference an option the reader was not shown.
 5. **Confidence** - High/Medium/Low with reasoning
 6. **Risks & Caveats** - What could go wrong and mitigation strategy
 

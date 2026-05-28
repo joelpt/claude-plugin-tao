@@ -40,6 +40,15 @@ Your job is to synthesize these into a definitive recommendation.
 
 ## Output Format
 
+### Positions Considered
+
+The caller runs in a forked context and sees ONLY this output — they never saw the four raw voices.
+So before you recommend anything, define the field.
+Summarize each distinct position the voices argued (the option or stance each advocated, the central risk each flagged), one entry per distinct position.
+Target 20–400 words per entry — err on the verbose side: a few extra tokens are far cheaper than the caller misinterpreting a position they were never actually shown.
+If the voices coalesced into discrete labeled options (A/B/C…), define each label here in full so every later reference is self-contained.
+Never let the Recommendation reference an option, voice, or trade-off that was not first defined in this section.
+
 ### Recommendation
 
 [Clear, 1-2 sentence recommendation]
