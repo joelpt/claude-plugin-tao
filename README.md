@@ -39,7 +39,7 @@ All modes are available as `/tao <mode> <args>` or as dedicated `/tao:<mode> <ar
 | `chat` | Sonnet | Collaborative discussion and brainstorming |
 | `clink` | Sonnet | CLI integration and bridging guidance |
 | `apilookup` | — | API/library quick-reference research |
-| `guru-chat` | Opus ×5 + Sonnet | Roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest), synthesized |
+| `guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer, then synthesized |
 
 ### Multi-LLM modes (external voices)
 

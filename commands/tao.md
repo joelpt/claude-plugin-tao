@@ -39,7 +39,7 @@ When the user invokes `/tao <mode>`, dispatch to the appropriate agent or handle
 | requirements | `tao:requirements-architect` | sonnet | Requirements discovery and technical translation |
 | synthesize | `tao:perspective-synthesizer` | sonnet | Reconcile multiple viewpoints into unified strategy |
 | consensus | Claude + Grok + Codex + Ollama | opus + 3 external | 4-voice multi-LLM decision analysis (see /tao:consensus) |
-| guru-chat | 5 luminary personas + `tao:perspective-synthesizer` | opus personas + sonnet synthesis | Roundtable of industry luminaries, synthesized (see /tao:guru-chat) |
+| guru-chat | 5 luminary personas + `tao:perspective-synthesizer` | sonnet personas + sonnet synthesis | Live peer-to-peer roundtable of industry luminaries, synthesized (see standalone /tao:guru-chat command) |
 | refactor | `tao:refactoring-advisor` | sonnet | Code smell detection and refactoring strategy |
 | precommit | `tao:precommit-validator` | sonnet | Git change validation before commit |
 | docgen | `tao:doc-generator` | sonnet | Documentation generation |
@@ -221,7 +221,7 @@ When `--high-effort` (or `--thinking`) is specified:
 - Required for full multi-LLM functionality (defaults — all swappable in `config/models.json`):
   - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (consensus critic + challenge/skeptic challenger)
   - Codex plugin installed + OpenAI subscription — consensus analyst voice; swap to `openai` provider if preferred
-  - Ollama: `ollama pull deepseek-r1:70b` then `ollama serve` — local voice; swap to `groq` provider for fast cloud inference without GPU
+  - Ollama: `ollama pull qwen3:32b` then `ollama serve` — local voice; swap to `groq` provider for fast cloud inference without GPU
   - `OPENAI_API_KEY` in `~/.zshenv` — optional; enables `openai` provider (gpt-4o default)
   - `GROQ_API_KEY` in `~/.zshenv` — optional; enables `groq` provider (llama-3.3-70b-versatile default, very fast)
   - `GEMINI_API_KEY` in `~/.zshenv` — optional; enables `gemini` provider (gemini-2.5-pro default)
