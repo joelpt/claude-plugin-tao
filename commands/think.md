@@ -1,7 +1,6 @@
 ---
 name: think
 description: "Deep reasoning with automatic rigorous vetting via sub-agents — problem decomposition, proposal development, vetting, and final recommendation with confidence levels. Usage: /tao:think <problem or question>"
-context: fork
 ---
 
 # Tao — Think

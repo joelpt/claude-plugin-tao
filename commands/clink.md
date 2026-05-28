@@ -1,7 +1,6 @@
 ---
 name: clink
 description: "External CLI integration bridging — guidance on integrating tao workflows with external CLI tools and optimizing requests for different AI CLIs. Usage: /tao:clink --cli-name=<name> [--prompt=<task>]"
-context: fork
 ---
 
 # Tao — Clink

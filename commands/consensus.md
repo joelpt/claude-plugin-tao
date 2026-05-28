@@ -1,7 +1,6 @@
 ---
 name: consensus
 description: "4-voice multi-LLM consensus analysis: Claude Opus (advocate) + Grok 4.3 (critic) + Codex/GPT (analyst) + Ollama local model (local). Usage: /tao:consensus <question or decision>"
-context: fork
 ---
 
 # Tao Consensus Mode
@@ -97,7 +96,7 @@ Agent(
 
 Note any unavailable voices and how that affects confidence.
 
-Self-contained output (mandatory): the caller runs in a forked context and sees ONLY your response — never these four raw voices. Open with a 'Positions Considered' section defining each distinct option/stance the voices argued (20–400 words each; err verbose) before any recommendation references it. Never report 'option X is strongest / Y was rejected' without first showing the reader what X and Y are."""
+Self-contained output (mandatory): the caller sees ONLY your response — never these four raw voices. Open with a 'Positions Considered' section defining each distinct option/stance the voices argued (20–400 words each; err verbose) before any recommendation references it. Never report 'option X is strongest / Y was rejected' without first showing the reader what X and Y are."""
 )
 ```
 

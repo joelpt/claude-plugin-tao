@@ -1,7 +1,6 @@
 ---
 name: thinkdeep
 description: "Multi-stage deep reasoning for complex problems — algorithms, architecture, security threat modeling, multi-variable optimization. Usage: /tao:thinkdeep <problem>"
-context: fork
 ---
 
 # Tao — Think Deep

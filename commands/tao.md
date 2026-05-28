@@ -1,7 +1,6 @@
 ---
 name: tao
 description: "Advanced reasoning workflows routing to optimal Claude model tiers (Opus/Sonnet/Haiku) plus external LLMs (Grok 4.3, Codex/GPT, Ollama qwen3:32b) for consensus and adversarial modes. Usage: /tao <mode> [args]. Modes: thinkdeep, debug, codereview, secaudit, analyze, planner, think, vet, challenge, skeptic, requirements, synthesize, consensus, guru-chat, refactor, precommit, docgen, testgen, tracer, chat, clink, apilookup"
-context: fork
 ---
 
 # Tao - Advanced Reasoning Workflows
@@ -83,8 +82,8 @@ When using natural language, the entire text after the mode name is passed as th
 
 This contract is non-negotiable and applies to every mode below, including the synthesis step of the multi-voice modes.
 
-`context: fork` means the user sees ONLY the final returned text — never the forked subcontext, the agent chatter, or the intermediate reasoning where options were generated and labeled.
-All of that is discarded at the fork boundary, so the returned text must stand entirely on its own.
+Each dispatched agent runs in its own context, and the user sees ONLY the agent's final returned text — never the agent's internal chatter or the intermediate reasoning where options were generated and labeled.
+All of that stays inside the agent's context, so the returned text must stand entirely on its own.
 
 Rule (mechanical, self-checkable): any label, shorthand, or back-reference used in a conclusion — e.g. "Option A", "the second proposal", "Voice 2's position", "approach #3", "the rejected design" — MUST be defined in the same output, in a section that *precedes* the conclusion.
 If internal labels were used while reasoning, restate each labeled item in full at its first user-facing mention.
@@ -217,7 +216,7 @@ When `--high-effort` (or `--thinking`) is specified:
 ## Notes
 
 - Most modes use the Claude Max subscription (free tier) — no external cost or API tokens consumed.
-- `context: fork` in this file's frontmatter runs the entire tao invocation in an isolated subcontext — intermediate reasoning and agent chatter never accumulate in your main conversation window.
+- Each mode dispatches to a sub-agent that runs in its own context, so the agent's intermediate reasoning and chatter stay out of your main conversation window — only its final synthesized output returns.
 - Consensus, challenge, and skeptic modes use external models with graceful degradation if unavailable.
 - Required for full multi-LLM functionality (defaults — all swappable in `config/models.json`):
   - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (consensus critic + challenge/skeptic challenger)

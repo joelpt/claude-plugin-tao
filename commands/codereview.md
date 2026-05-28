@@ -1,7 +1,6 @@
 ---
 name: codereview
 description: "Comprehensive code quality and security analysis — quality, security, performance, architecture, and actionable recommendations. Usage: /tao:codereview [--files=<paths>]"
-context: fork
 ---
 
 # Tao — Code Review

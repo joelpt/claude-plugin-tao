@@ -1,7 +1,6 @@
 ---
 name: chat
 description: "Collaborative thinking and discussion — brainstorming, problem-solving, and code discussion with optional file context. Usage: /tao:chat <topic or question>"
-context: fork
 ---
 
 # Tao — Chat

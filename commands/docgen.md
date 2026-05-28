@@ -1,7 +1,6 @@
 ---
 name: docgen
 description: "Documentation generation — API docs, architecture docs, usage guides, and inline documentation with consistent formatting. Usage: /tao:docgen [--files=<paths>] [--prompt=<type>]"
-context: fork
 ---
 
 # Tao — Doc Generator

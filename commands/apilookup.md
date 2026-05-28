@@ -1,7 +1,6 @@
 ---
 name: apilookup
 description: "API and library research — finds official docs, current version, quick-start patterns, and common pitfalls using web search. Usage: /tao:apilookup <library or API name>"
-context: fork
 ---
 
 # Tao — API Lookup

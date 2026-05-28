@@ -1,7 +1,6 @@
 ---
 name: tracer
 description: "Code flow and dependency tracing — analyzes execution paths, data flow, dependencies, and provides instrumentation strategies. Usage: /tao:tracer [--files=<paths>] <function or flow to trace>"
-context: fork
 ---
 
 # Tao — Execution Tracer

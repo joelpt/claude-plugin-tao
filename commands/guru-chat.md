@@ -1,7 +1,6 @@
 ---
 name: guru-chat
 description: "Roundtable of software-engineering luminaries: Linus Torvalds, Guido van Rossum, Anders Hejlsberg, John Carmack + one question-relevant guest, discussing your question, then synthesized. Usage: /tao:guru-chat <question or topic>"
-context: fork
 ---
 
 # Tao Guru-Chat Mode

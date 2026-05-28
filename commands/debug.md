@@ -1,7 +1,6 @@
 ---
 name: debug
 description: "Systematic hypothesis-driven debugging for complex bugs, intermittent failures, and performance problems. Usage: /tao:debug <issue description>"
-context: fork
 ---
 
 # Tao — Debug

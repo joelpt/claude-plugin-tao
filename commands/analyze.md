@@ -1,7 +1,6 @@
 ---
 name: analyze
 description: "Architecture and strategic code analysis — design patterns, scalability, technical debt, and improvement roadmaps. Uses 1M context window. Usage: /tao:analyze [--files=<paths>] <question>"
-context: fork
 ---
 
 # Tao — Analyze

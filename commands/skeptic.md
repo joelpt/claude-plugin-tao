@@ -1,7 +1,6 @@
 ---
 name: skeptic
 description: "3-voice constructive skepticism: Claude Opus + Grok 4.3 + Ollama probe a proposal for risks and wrong assumptions. Usage: /tao:skeptic <proposal to scrutinize>"
-context: fork
 ---
 
 # Tao — Skeptic

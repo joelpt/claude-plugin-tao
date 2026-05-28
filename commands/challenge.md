@@ -1,7 +1,6 @@
 ---
 name: challenge
 description: "3-voice adversarial challenge: Claude Sonnet + Grok 4.3 + Ollama attack a statement from every angle. Usage: /tao:challenge <statement to challenge>"
-context: fork
 ---
 
 # Tao — Challenge

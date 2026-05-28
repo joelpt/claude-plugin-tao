@@ -1,7 +1,6 @@
 ---
 name: requirements
 description: "Requirements discovery and technical translation — surfaces implicit requirements, translates business goals to technical specs, and evaluates approaches. Usage: /tao:requirements <feature or goal>"
-context: fork
 ---
 
 # Tao — Requirements

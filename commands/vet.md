@@ -1,7 +1,6 @@
 ---
 name: vet
 description: "Multi-perspective proposal vetting and validation — stress-tests decisions, architectural choices, and implementation plans before commitment. Usage: /tao:vet <proposal>"
-context: fork
 ---
 
 # Tao — Vet

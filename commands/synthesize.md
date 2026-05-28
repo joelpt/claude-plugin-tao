@@ -1,7 +1,6 @@
 ---
 name: synthesize
 description: "Reconcile multiple conflicting viewpoints, approaches, or solutions into a unified strategy. Usage: /tao:synthesize <description of the conflicting perspectives>"
-context: fork
 ---
 
 # Tao — Synthesize
