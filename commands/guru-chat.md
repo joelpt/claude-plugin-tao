@@ -87,41 +87,73 @@ Under the protocol above, peer chatter should not reach you (it is routed peer-t
 
 ### 3d. Arm a stall-detector while the discussion runs
 
-A teammate sometimes goes idle without sending its `FINAL POSITION` (it forgot, or it thinks it is done but never reported). Detect this and nudge.
+A teammate sometimes goes idle without sending its `FINAL POSITION` (it forgot, or it thinks it is done but never reported).
+Detect this and nudge.
 
-**Preferred — a `Monitor`.** It reads the lead's inbox on disk and distinguishes a real report-out from an idle blip: a teammate's idle notification lands in `~/.claude/teams/<TEAM>/inboxes/team-lead.json` as a message whose `text` contains `idle_notification`; a real report-out is any other message. Arm it right after spawning (substitute `<TEAM>`), `persistent: false`, `timeout_ms: 1800000`:
+**Preferred — write a detector script, then arm a `Monitor`.**
+
+The Monitor `command` param is a plain JSON string; it cannot safely embed heredocs or bash+python composites.
+Write the logic to a temp file first, then point Monitor at it.
+
+**Step 1 — `Bash`: write the detector script** (substitute `<TEAM>` with the actual team name):
 
 ```bash
-TEAM="<TEAM>"; N=5
-LEAD="$HOME/.claude/teams/$TEAM/inboxes/team-lead.json"
-prev=-1; quiet=0
-while true; do
-  read -r cnt names idle <<EOF
-$(python3 -c "
-import json, os
-p = '$LEAD'
-m = json.load(open(p)) if os.path.exists(p) else []
-done = sorted({x['from'] for x in m if 'FINAL POSITION' in x.get('text','') and 'idle_notification' not in x.get('text','')})
-idle = sorted({x['from'] for x in m if 'idle_notification' in x.get('text','')})
-strag = [g for g in idle if g not in done]
-print(len(done), (','.join(done) or '-'), (','.join(strag) or '-'))
-" 2>/dev/null || echo "0 - -")
+TEAM="<TEAM>"
+cat > "/tmp/guru_stall_${TEAM}.py" << 'EOF'
+#!/usr/bin/env python3
+import json, os, sys, time
+
+TEAM = sys.argv[1]
+N = int(sys.argv[2])
+LEAD = f"{os.environ['HOME']}/.claude/teams/{TEAM}/inboxes/team-lead.json"
+prev = -1
+quiet = 0
+
+while True:
+    try:
+        m = json.load(open(LEAD)) if os.path.exists(LEAD) else []
+    except Exception:
+        m = []
+    done = sorted({x['from'] for x in m
+                   if 'FINAL POSITION' in x.get('text', '')
+                   and 'idle_notification' not in x.get('text', '')})
+    idle = sorted({x['from'] for x in m
+                   if 'idle_notification' in x.get('text', '')
+                   and x['from'] not in done})
+    cnt = len(done)
+    if cnt != prev:
+        print(f"PROGRESS reported={cnt}/{N} [{','.join(done)}]", flush=True)
+        prev = cnt
+        quiet = 0
+    else:
+        quiet += 15
+    if cnt >= N:
+        print(f"ALL_REPORTED [{','.join(done)}]", flush=True)
+        break
+    if quiet >= 90:
+        print(f"STALL reported={cnt}/{N} idle_not_reported=[{','.join(idle)}]", flush=True)
+        quiet = 0
+    time.sleep(15)
 EOF
-  if [ "$cnt" != "$prev" ]; then echo "PROGRESS reported=$cnt/$N [$names]"; prev=$cnt; quiet=0; else quiet=$((quiet + 15)); fi
-  if [ "$cnt" -ge "$N" ]; then echo "ALL_REPORTED [$names]"; break; fi
-  if [ "$quiet" -ge 90 ]; then echo "STALL reported=$cnt/$N idle_not_reported=[$idle]"; quiet=0; fi
-  sleep 15
-done
 ```
 
-It emits `PROGRESS` when a new report-out lands, `STALL` (naming gurus who are idle but have not reported) after 90s without progress, and `ALL_REPORTED` then exits.
-On a `STALL` event, `SendMessage` each named guru: "Do you have anything further to discuss or report, or are you all done now? If you are done, send me your FINAL POSITION report-out now." Then keep waiting.
-When `ALL_REPORTED` fires (or all five report-outs are otherwise in hand), `TaskStop` the Monitor and proceed to Step 4.
+**Step 2 — arm the `Monitor`** (substitute `<TEAM>` in the command string):
 
-**Fallback — a self-paced `/loop` check-in.** If the Monitor tool is unavailable or unsuitable, periodically (roughly every 60–90s, while discussion is still ongoing) check which gurus have gone idle for a while without sending a `FINAL POSITION`, and `SendMessage` each one: "Do you have anything further to discuss or report, or are you all done now?" Stop checking once all five have reported.
+- `description`: `"guru roundtable stall detector"`
+- `timeout_ms`: `1800000`
+- `persistent`: `false`
+- `command`: `"python3 /tmp/guru_stall_<TEAM>.py <TEAM> 5"`
 
-Bound the cost: let the discussion run until it settles or the Monitor times out (~30 min). Do not loop indefinitely; if a guru stays unresponsive after two nudges, proceed to synthesis with the report-outs you have and note who did not report.
-Note for the user: five Sonnet agents in open discussion is a wider cost envelope than a structured two-round relay. Typical runs settle in 5–15 min; the ~30 min cap is a ceiling, not the expected duration.
+The Monitor emits `PROGRESS` when a new report-out lands, `STALL` (naming gurus who are idle but have not yet reported) after 90 s without new progress, and `ALL_REPORTED` then exits.
+On a `STALL` event: `SendMessage` each named guru: "Do you have anything further to discuss or report, or are you all done now? If you are done, send me your FINAL POSITION report-out now."
+When `ALL_REPORTED` fires (or all five report-outs are otherwise in hand): `TaskStop` the Monitor and proceed to Step 4.
+
+**Fallback — periodic inline `Bash` check.** If Monitor is unavailable, every ~90 s: `Bash` to read `~/.claude/teams/<TEAM>/inboxes/team-lead.json`, identify gurus with `idle_notification` but no `FINAL POSITION`, and `SendMessage` each one. Stop once all five have reported.
+
+Bound the cost: let the discussion run until it settles or the 30-min cap hits.
+Do not loop indefinitely; if a guru stays unresponsive after two nudges, proceed to synthesis with the report-outs you have and note who did not report.
+Note for the user: five Sonnet agents in open discussion is a wider cost envelope than a structured two-round relay.
+Typical runs settle in 5–15 min; the ~30 min cap is a ceiling, not the expected duration.
 
 ### 3e. Fallback path — parallel isolated subagents (no cross-talk)
 
