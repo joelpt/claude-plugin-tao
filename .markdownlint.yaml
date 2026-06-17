@@ -15,3 +15,12 @@ MD030: false
 
 # Agent and command files are system prompts that start with prose, not h1 headings
 MD041: false
+
+# Disable table column style enforcement
+#
+# Reason: MD060 (markdownlint v0.40.0+) flags padded table pipes
+# (`| a | b |`) against a "compact" style and vice versa. Tables here use
+# the readable padded style deliberately; the rule yields only false flags.
+#
+# Details: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md060---table-column-style
+MD060: false
