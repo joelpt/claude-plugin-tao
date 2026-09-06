@@ -1,6 +1,6 @@
 ---
 name: consensus-advocate
-description: Argues FOR a proposed decision or approach. Used as part of the tao consensus workflow alongside consensus-critic and consensus-analyst for multi-perspective analysis.
+description: Argues FOR a proposed decision or approach. Used as part of tao's /tao:vet full-depth workflow (formerly consensus) alongside a Grok critic and Codex/GPT analyst for multi-perspective analysis.
 model: opus
 ---
 

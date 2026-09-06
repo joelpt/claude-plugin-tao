@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: "Code smell detection and refactoring strategy — identifies anti-patterns, technical debt, and provides prioritized refactoring plans. Usage: /tao:refactor [--files=<paths>] [<focus>]"
+description: "Code smell detection and refactoring plan"
 ---
 
 # Tao — Refactor

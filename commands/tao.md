@@ -1,6 +1,6 @@
 ---
 name: tao
-description: "Advanced reasoning workflows routing to optimal Claude model tiers (Opus/Sonnet/Haiku) plus external LLMs (Grok 4.3, Codex/GPT, Ollama qwen3:32b) for consensus and adversarial modes. Usage: /tao <mode> [args]. Modes: thinkdeep, debug, codereview, secaudit, analyze, planner, think, vet, challenge, skeptic, requirements, synthesize, consensus, guru-chat, refactor, precommit, docgen, testgen, tracer, chat, clink, apilookup"
+description: "Multi-model reasoning router with many modes"
 ---
 
 # Tao - Advanced Reasoning Workflows
@@ -26,28 +26,26 @@ When the user invokes `/tao <mode>`, dispatch to the appropriate agent or handle
 
 | Mode | Agent | Model | Description |
 |------|-------|-------|-------------|
-| thinkdeep | `tao:deep-reasoner` | opus | Deep reasoning for complex problems |
 | debug | `tao:debug-investigator` | opus | Systematic debugging with hypothesis-driven investigation |
 | codereview | `tao:code-reviewer` | opus | Comprehensive code quality and security analysis |
 | secaudit | `tao:security-auditor` | opus | Security and compliance assessment |
 | analyze | `tao:architecture-analyst` | opus | Architecture and strategic code analysis (1M context) |
 | planner | `tao:task-planner` | opus | Structured task planning with phases |
-| think | `tao:thinker` | opus | Deep reasoning with rigorous vetting via sub-agents |
-| vet | `tao:proposal-vetting-judge` | opus | Multi-perspective proposal vetting and validation |
-| challenge | `tao:challenge-assessor` + Grok + Ollama | sonnet + 2 external | 3-voice adversarial challenge (Claude + Grok + Ollama) |
-| skeptic | `tao:senior-skeptic-reviewer` + Grok + Ollama | opus + 2 external | 3-voice constructive skepticism (Claude + Grok + Ollama) |
+| think | `tao:thinker` (default) or `tao:deep-reasoner` (`--quick`) | opus | Deep reasoning, with rigorous vetting by default; `--quick` skips vetting (formerly `/tao:thinkdeep`, see standalone /tao:think command) |
+| vet | 1/3/4 voices depending on depth (see below) | opus (+ external at standard/full) | Multi-perspective vetting/challenge/consensus, merged into one depth dial (see standalone /tao:vet command) |
 | requirements | `tao:requirements-architect` | sonnet | Requirements discovery and technical translation |
 | synthesize | `tao:perspective-synthesizer` | sonnet | Reconcile multiple viewpoints into unified strategy |
-| consensus | Claude + Grok + Codex + Ollama | opus + 3 external | 4-voice multi-LLM decision analysis (see /tao:consensus) |
 | guru-chat | 5 luminary personas + `tao:perspective-synthesizer` | sonnet personas + sonnet synthesis | Live peer-to-peer roundtable of industry luminaries, synthesized (see standalone /tao:guru-chat command) |
 | refactor | `tao:refactoring-advisor` | sonnet | Code smell detection and refactoring strategy |
 | precommit | `tao:precommit-validator` | sonnet | Git change validation before commit |
 | docgen | `tao:doc-generator` | sonnet | Documentation generation |
 | testgen | `tao:test-generator` | sonnet | Test suite generation with edge cases |
 | tracer | `tao:execution-tracer` | sonnet | Code flow and dependency tracing |
-| chat | `tao:chat-assistant` | sonnet | Collaborative thinking and discussion |
-| clink | `tao:clink-assistant` | sonnet | External CLI integration bridging |
+| chat | `tao:chat-assistant` | sonnet | Collaborative thinking and discussion (see standalone /tao:brainstorm command) |
+| clink | `tao:clink-assistant` | sonnet | External CLI integration bridging — internal use only, no standalone slash command |
 | apilookup | (inline) | - | API research guidance |
+
+`challenge`, `skeptic`, and `consensus` are no longer separate modes — they're `vet` at a fixed depth (`challenge`/`skeptic` → `--depth=standard`, `consensus` → `--depth=full`). `thinkdeep` is no longer a separate mode — it's `think --quick`. **These old names only still work via the `/tao <mode> ...` router form** (this file) — their standalone `/tao:challenge`, `/tao:skeptic`, `/tao:consensus`, and `/tao:thinkdeep` slash commands are deleted, not just deprecated. Also note: `/tao challenge` now runs its Claude voice at opus (via `tao:senior-skeptic-reviewer`), not the old sonnet-tier `tao:challenge-assessor` — slightly slower/costlier than before, since `standard` depth uses one shared Claude voice for both former challenge and skeptic framings. New usage should prefer `vet`/`think` directly.
 
 ## Argument Handling
 
@@ -55,28 +53,27 @@ Arguments can be passed in two ways:
 
 1. **Natural language** (preferred): Just write what you need after the mode. Examples:
    - `/tao debug my server is crashing on startup`
-   - `/tao challenge we don't need integration tests for this module`
    - `/tao think should we use SQLite or Postgres?`
-   - `/tao vet the proposed caching strategy using Redis pub/sub`
-   - `/tao consensus should we migrate from REST to GraphQL? --high-effort`
+   - `/tao vet the proposed caching strategy using Redis pub/sub` (depth chosen dynamically)
+   - `/tao vet should we migrate from REST to GraphQL? --depth=full --high-effort` (force full 4-voice consensus depth)
 
 2. **Explicit flags**: For precision or when combining multiple arguments:
    - `--high-effort` → Enable extended thinking for Claude voices (`[[ ultrathink ]]`, 32K thinking tokens) and 16K max_tokens for external API calls. Use when the decision is high-stakes or the analysis is inherently complex.
    - `--thinking` or `thinking` → Alias for `--high-effort`
    - `--files=<paths>` or `--file-paths=<paths>` → Comma-separated file/directory paths for the agent to analyze
    - `--focus-areas=<areas>` → Comma-separated areas to focus on
-   - `--question=<text>` → Decision question (consensus mode)
    - `--issue=<text>` → Bug description (debug mode)
-   - `--problem=<text>` → Problem statement (thinkdeep, think modes)
+   - `--problem=<text>` → Problem statement (think mode, with or without `--quick`)
    - `--task=<text>` → Task description (planner mode)
-   - `--statement=<text>` → Statement to challenge (challenge mode)
-   - `--proposal=<text>` → Proposal to vet (vet mode)
+   - `--proposal=<text>` → Proposal/statement/question to vet (vet mode and its challenge/skeptic/consensus aliases)
+   - `--depth=quick|standard|full` or `--voices=1|3|4` → Force a vet depth, skipping dynamic depth selection (vet mode only; ignored/implied for the challenge/skeptic/consensus aliases)
+   - `--quick` → Skip the vetting stage (think mode only; equivalent to the old thinkdeep mode)
    - `--query=<text>` → API/library to research (apilookup mode)
    - `--prompt=<text>` → Custom prompt (chat, docgen, secaudit, tracer, clink modes)
    - `--error-logs=<text>` → Error logs (debug mode)
    - `--cli-name=<name>` → Target CLI (clink mode)
 
-When using natural language, the entire text after the mode name is passed as the primary argument to the agent (e.g., as the issue for debug, statement for challenge, problem for think/thinkdeep, proposal for vet, etc.).
+When using natural language, the entire text after the mode name is passed as the primary argument to the agent (e.g., as the issue for debug, the problem for think, the proposal/statement/question for vet and its aliases, etc.).
 
 ## Self-Contained Output Contract (ALL modes)
 
@@ -114,78 +111,33 @@ Include in the agent prompt:
 4. The focus areas if specified
 5. Output format instruction — always tell the agent how to format its response for human consumption. The dedicated command files (e.g. `commands/debug.md`, `commands/codereview.md`) contain per-mode format specs; use those as the reference. Never let an agent return a raw JSON blob as its final user-facing response.
 
-### Consensus Mode
+### Vet Mode (and challenge/skeptic/consensus aliases)
 
-**Preferred invocation: `/tao:consensus`** — the standalone command in `commands/consensus.md` contains the full 4-voice parallel dispatch logic (Claude Opus advocate + Grok 4.3 critic + Codex/GPT analyst + Ollama local).
+**Preferred invocation: `/tao:vet`** — the standalone command in `commands/vet.md` contains the full depth-dial dispatch logic (quick=1 voice, standard=3 voices, full=4 voices) and the dynamic depth-selection rule used when no depth is specified.
 
-When `/tao consensus` is invoked (mode argument rather than dedicated command): forward to the same logic. Resolve paths and dispatch as documented in `commands/consensus.md`. Model assignments are in `config/models.json`.
+When `/tao vet` is invoked (mode argument rather than dedicated command): forward to the same logic in `commands/vet.md`, including its Step 0 dynamic depth decision when `--depth`/`--voices` is absent.
+
+When `/tao challenge`, `/tao skeptic`, or `/tao consensus` is invoked (legacy mode names, kept as forwarding aliases): forward to `commands/vet.md` with the depth fixed as follows, skipping Step 0's dynamic decision:
+
+- `challenge` → `--depth=standard`
+- `skeptic` → `--depth=standard`
+- `consensus` → `--depth=full`
+
+Model assignments for all depths are in `config/models.json` under `vet.quick` / `vet.standard` / `vet.full`.
+
+### Think Mode (and thinkdeep alias)
+
+**Preferred invocation: `/tao:think`** — the standalone command in `commands/think.md` contains both the default (vetted) and `--quick` (unvetted) dispatch logic.
+
+When `/tao think` is invoked (mode argument rather than dedicated command): forward to the same logic in `commands/think.md`.
+
+When `/tao thinkdeep` is invoked (legacy mode name, kept as a forwarding alias): forward to `commands/think.md`'s `--quick` path (dispatches `tao:deep-reasoner`, no vetting stage).
 
 ### Guru-Chat Mode
 
 **Preferred invocation: `/tao:guru-chat`** — the standalone command in `commands/guru-chat.md` contains the full roundtable logic (five luminary personas, team-based discussion with graceful fallback to parallel subagents, then synthesis via `tao:perspective-synthesizer`).
 
 When `/tao guru-chat` is invoked (mode argument rather than dedicated command): forward to the same logic documented in `commands/guru-chat.md`.
-
-### Challenge and Skeptic Modes (Claude + Grok + Ollama Parallel)
-
-Both modes run three voices in parallel: Claude (primary challenger), Grok 4.3 (external adversarial), and the default local Ollama model (independent local voice).
-
-**Resolve paths**:
-```bash
-SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
-CONFIG="$SCRIPTS/../config/models.json"
-```
-
-**Dispatch 3 voices in ONE message** (parallel tool calls):
-
-For **challenge** mode:
-
-- Claude (Agent): `Agent(subagent_type="tao:challenge-assessor", model="sonnet", prompt="Challenge this: <statement>")`
-- Grok (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.challenger --system="Challenge this statement aggressively. Find every flaw, assumption, and risk. Be direct." --max-tokens=4096`
-- Ollama (Bash): `printf '%s\n' "<statement>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=challenge.local --system="Challenge this statement. Identify every assumption, risk, and flaw. Be direct and specific." --max-tokens=8192`
-
-For **skeptic** mode:
-
-- Claude (Agent): `Agent(subagent_type="tao:senior-skeptic-reviewer", model="opus", prompt="Review skeptically: <proposal>")`
-- Grok (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.challenger --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" --max-tokens=4096`
-- Ollama (Bash): `printf '%s\n' "<proposal>" | python3 "$SCRIPTS/llm_call.py" --config "$CONFIG" --role=skeptic.local --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." --max-tokens=8192`
-
-**After all three complete**, present results with neutral attribution — do NOT editorialize or weight voices. Show each response verbatim, then a mechanical merge:
-
-```text
-## Claude [sonnet|opus]
-<claude response verbatim>
-
-## Grok 4.3
-<grok response verbatim, or "[Grok unavailable: check XAI_API_KEY in ~/.zshenv]">
-
-## Ollama [model-name]
-<ollama response verbatim, or "[Ollama unavailable: check ollama serve is running]">
-
-## Points raised by multiple models
-<deduplicated list — note which models raised each point, e.g. "(Claude, Grok)">
-
-## Points raised by only one model
-<list with attribution — potential unique insights or model-specific blind spots>
-
-## Explicit disagreements
-<only where models took directly opposing positions — quote both sides>
-```
-
-The synthesis section is a mechanical merge and diff — do not add interpretation, editorial judgment, or a recommendation unless the user explicitly asks for one afterward.
-
-After synthesis, append a run summary table. Extract `[tao-stats]` lines from Bash stderr (each Bash tool result includes stderr — scan for lines beginning `[tao-stats]`). Use `—` for the Claude voice (no token telemetry available).
-
-```text
-## Run stats
-| Voice   | Provider | Model        | Tokens in | Tokens out | Time   | Tok/s |
-|---------|----------|--------------|-----------|------------|--------|-------|
-| Claude  | claude   | <model>      | —         | —          | —      | —     |
-| Grok    | xai      | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
-| Ollama  | ollama   | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
-```
-
-If a voice was unavailable, omit its row or mark all cells `unavailable`.
 
 ### Inline Modes (No Agent Needed)
 
@@ -217,13 +169,13 @@ When `--high-effort` (or `--thinking`) is specified:
 
 - Most modes use the Claude Max subscription (free tier) — no external cost or API tokens consumed.
 - Each mode dispatches to a sub-agent that runs in its own context, so the agent's intermediate reasoning and chatter stay out of your main conversation window — only its final synthesized output returns.
-- Consensus, challenge, and skeptic modes use external models with graceful degradation if unavailable.
+- `vet` at `standard`/`full` depth (and its `challenge`/`skeptic`/`consensus` aliases) use external models with graceful degradation if unavailable; `quick` depth is Claude-only.
 - Required for full multi-LLM functionality (defaults — all swappable in `config/models.json`):
-  - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (consensus critic + challenge/skeptic challenger)
-  - Codex plugin installed + OpenAI subscription — consensus analyst voice; swap to `openai` provider if preferred
+  - `XAI_API_KEY` in `~/.zshenv` — xAI Grok (vet standard/full critic/challenger voice)
+  - Codex plugin installed + OpenAI subscription — vet full-depth analyst voice; swap to `openai` provider if preferred
   - Ollama: `ollama pull qwen3:32b` then `ollama serve` — local voice; swap to `groq` provider for fast cloud inference without GPU
-  - `OPENAI_API_KEY` in `~/.zshenv` — optional; enables `openai` provider (gpt-4o default)
-  - `GROQ_API_KEY` in `~/.zshenv` — optional; enables `groq` provider (llama-3.3-70b-versatile default, very fast)
+  - `OPENAI_API_KEY` in `~/.zshenv` — optional; enables `openai` provider (gpt-5 default)
+  - `GROQ_API_KEY` in `~/.zshenv` — optional; enables `groq` provider (meta-llama/llama-4-scout-17b-16e-instruct default, very fast)
   - `GEMINI_API_KEY` in `~/.zshenv` — optional; enables `gemini` provider (gemini-2.5-pro default)
 - Default local model is set by `"_default_local_model"` in `config/models.json` — change it there to use a different Ollama model across all modes simultaneously.
 - All other model assignments are configurable in `config/models.json` — no command files need editing.

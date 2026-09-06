@@ -2,7 +2,7 @@
   "name": "tao",
   "displayName": "Tao",
   "description": "Advanced multi-model AI reasoning workflows using Claude (Opus/Sonnet/Haiku), Grok 4.3, Codex/GPT, and local Ollama for consensus and adversarial analysis. Routes to optimal model per task type.",
-  "version": "2026.06.23.1",
+  "version": "2026.09.06.1",
   "author": {
     "name": "Joel Thornton"
   }

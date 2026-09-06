@@ -1,6 +1,6 @@
 ---
 name: planner
-description: "Structured task planning with scope definition, strategy, and detailed execution phases. Usage: /tao:planner <task description>"
+description: "Structured task planning with execution phases"
 ---
 
 # Tao — Planner

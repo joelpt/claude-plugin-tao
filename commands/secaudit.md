@@ -1,6 +1,6 @@
 ---
 name: secaudit
-description: "Security and compliance assessment — OWASP Top 10, threat modeling, vulnerability analysis, and remediation strategies. Usage: /tao:secaudit [--files=<paths>] [--prompt=<focus>]"
+description: "OWASP security and compliance assessment"
 ---
 
 # Tao — Security Audit

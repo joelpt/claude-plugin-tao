@@ -1,6 +1,6 @@
 ---
 name: testgen
-description: "Test suite generation with comprehensive edge case analysis — plans testing strategy, identifies edge cases, and produces implementable test specifications. Usage: /tao:testgen [--files=<paths>] [<focus>]"
+description: "Generate tests with edge-case coverage"
 ---
 
 # Tao — Test Generator

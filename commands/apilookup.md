@@ -1,6 +1,6 @@
 ---
 name: apilookup
-description: "API and library research — finds official docs, current version, quick-start patterns, and common pitfalls using web search. Usage: /tao:apilookup <library or API name>"
+description: "Look up library/API docs, versions, pitfalls"
 ---
 
 # Tao — API Lookup

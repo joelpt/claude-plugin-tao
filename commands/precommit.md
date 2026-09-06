@@ -1,6 +1,6 @@
 ---
 name: precommit
-description: "Validate git changes before commit — quality, security, compliance, and commit readiness with actionable recommendations. Usage: /tao:precommit"
+description: "Validate git changes before commit"
 ---
 
 # Tao — Pre-commit Validator

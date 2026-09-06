@@ -1,6 +1,6 @@
 ---
 name: consensus-synthesizer
-description: Synthesizes multiple perspectives into a balanced recommendation. Final step of the tao consensus workflow -- receives outputs from up to 4 voices (Claude Advocate, Grok Critic, Codex/GPT Analyst, Ollama Local).
+description: Synthesizes multiple perspectives into a balanced recommendation. Final step of /tao:vet's full-depth workflow (formerly consensus) -- receives outputs from up to 4 voices (Claude Advocate, Grok Critic, Codex/GPT Analyst, Ollama Local).
 model: opus
 ---
 

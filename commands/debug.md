@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Systematic hypothesis-driven debugging for complex bugs, intermittent failures, and performance problems. Usage: /tao:debug <issue description>"
+description: "Hypothesis-driven debugging for complex bugs"
 ---
 
 # Tao — Debug

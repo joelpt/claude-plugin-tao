@@ -15,8 +15,8 @@ Usage (config-based role):
 API keys (from ~/.zshenv — never hardcoded):
   GEMINI_API_KEY  — Google Gemini (generativelanguage API v1beta)
   XAI_API_KEY     — xAI Grok (OpenAI-compatible endpoint at api.x.ai)
-  OPENAI_API_KEY  — OpenAI direct (api.openai.com). Default model: gpt-4o.
-  GROQ_API_KEY    — Groq LPU inference (api.groq.com). Default model: llama-3.3-70b-versatile.
+  OPENAI_API_KEY  — OpenAI direct (api.openai.com). Default model: gpt-5.
+  GROQ_API_KEY    — Groq LPU inference (api.groq.com). Default model: meta-llama/llama-4-scout-17b-16e-instruct.
   (Codex uses the OpenAI Codex CLI companion — no key var needed here)
   (Ollama needs no key — local endpoint at localhost:11434)
 """
@@ -232,14 +232,14 @@ def call_openai(prompt: str, model: str | None, system: str | None, max_tokens: 
 
     Args:
         prompt: User message to send.
-        model: OpenAI model identifier; defaults to "gpt-4o".
+        model: OpenAI model identifier; defaults to "gpt-5".
         system: Optional system prompt text.
         max_tokens: Maximum output tokens to request.
 
     Returns:
         The content string from the first response choice.
     """
-    model = model or "gpt-4o"
+    model = model or "gpt-5"
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY not set in environment")
@@ -286,14 +286,14 @@ def call_groq(prompt: str, model: str | None, system: str | None, max_tokens: in
 
     Args:
         prompt: User message to send.
-        model: Groq model identifier; defaults to "llama-3.3-70b-versatile".
+        model: Groq model identifier; defaults to "meta-llama/llama-4-scout-17b-16e-instruct".
         system: Optional system prompt text.
         max_tokens: Maximum output tokens to request.
 
     Returns:
         The content string from the first response choice.
     """
-    model = model or "llama-3.3-70b-versatile"
+    model = model or "meta-llama/llama-4-scout-17b-16e-instruct"
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY not set in environment")
@@ -468,7 +468,7 @@ def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | No
 
     Args:
         config_path: Filesystem path to the models.json config file.
-        role_path: Dot-separated key path into the config (e.g. "consensus.critic").
+        role_path: Dot-separated key path into the config (e.g. "vet.full.critic").
 
     Returns:
         A tuple of (provider, model) where model may be None if not specified in config.
@@ -515,7 +515,7 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=8192)
     parser.add_argument("--config", default=None, help="Path to models.json config file")
     parser.add_argument(
-        "--role", default=None, help="Dot-separated role in config (e.g. consensus.critic)"
+        "--role", default=None, help="Dot-separated role in config (e.g. vet.full.critic)"
     )
     args = parser.parse_args()
 
@@ -549,8 +549,8 @@ def main() -> None:
     defaults: dict[str, str] = {
         "gemini": "gemini-2.5-pro",
         "xai": "grok-4.3",
-        "openai": "gpt-4o",
-        "groq": "llama-3.3-70b-versatile",
+        "openai": "gpt-5",
+        "groq": "meta-llama/llama-4-scout-17b-16e-instruct",
         "ollama": "qwen3:32b",
     }
     if model is None and provider in defaults:

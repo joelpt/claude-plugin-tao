@@ -1,9 +1,9 @@
 ---
-name: chat
-description: "Collaborative thinking and discussion — brainstorming, problem-solving, and code discussion with optional file context. Usage: /tao:chat <topic or question>"
+name: brainstorm
+description: "Brainstorming and collaborative discussion partner"
 ---
 
-# Tao — Chat
+# Tao — Brainstorm
 
 Collaborative thinking and discussion partner for brainstorming, problem-solving, and code discussion with optional file context.
 
