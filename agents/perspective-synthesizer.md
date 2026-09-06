@@ -1,42 +1,6 @@
 ---
 name: perspective-synthesizer
-description: |
-  Use this agent when you have multiple viewpoints, approaches, or solutions to a problem that need to be reconciled into a unified strategy. Specifically:
-
-  - When different team members or stakeholders propose conflicting solutions
-  - When analyzing trade-offs between multiple architectural approaches
-  - When evaluating competing technical designs or implementation strategies
-  - When synthesizing feedback from code reviews with different perspectives
-  - When reconciling user requirements that seem contradictory
-  - When integrating insights from multiple research sources or documentation
-  - After gathering diverse opinions on a technical decision
-  - When multiple valid approaches exist and you need to find the optimal synthesis
-
-  Examples:
-
-  <example>
-  Context: User has received feedback from three developers on a proposed database schema change, each suggesting different approaches.
-
-  user: "I got three different suggestions for handling the user preferences table. Developer A wants to use JSONB columns, Developer B suggests a key-value table, and Developer C recommends separate columns for each preference. Can you help me figure out the best approach?"
-
-  assistant: "I'll use the perspective-synthesizer agent to analyze these three approaches, identify their synergies, evaluate second-order consequences, and formulate an optimal solution that considers all perspectives."
-  </example>
-
-  <example>
-  Context: User is evaluating different caching strategies proposed by team members.
-
-  user: "We're debating caching strategies. Some want Redis, others want in-memory caching, and one person suggested a hybrid approach. What's the best path forward?"
-
-  assistant: "Let me engage the perspective-synthesizer agent to evaluate these caching strategies, identify potential synergies between them, and develop a comprehensive solution."
-  </example>
-
-  <example>
-  Context: User has conflicting requirements from different stakeholders about API design.
-
-  user: "Product wants a simple REST API, engineering prefers GraphQL for flexibility, and ops is concerned about monitoring complexity. How do we reconcile this?"
-
-  assistant: "I'll use the perspective-synthesizer agent to analyze these stakeholder perspectives and find a solution that addresses all concerns while maximizing value."
-  </example>
+description: Reconciles multiple conflicting viewpoints, approaches, or solutions into a unified strategy by identifying synergies, evaluating consequences, and synthesizing an optimal path forward. Dispatched explicitly by name (tao:perspective-synthesizer) from /tao:synthesize, /tao:vet's full depth, and /tao:guru-chat — never auto-selected by description matching.
 model: sonnet
 color: yellow
 ---

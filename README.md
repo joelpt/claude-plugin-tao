@@ -15,35 +15,30 @@ Requires read access to the private marketplace repo (`gh auth login`).
 
 ## Modes
 
-All modes are available as `/tao <mode> <args>`; most also have a dedicated `/tao:<mode> <args>` command. `chat` is exposed as `/tao:brainstorm`. `clink` has no standalone command — it's internal-only, reachable via `/tao clink` (used by tao/Claude for CLI-bridging guidance).
-
-**Prefer the dedicated `/tao:<mode>` form when one exists** — it skips loading the `/tao` router entirely, using noticeably fewer tokens per turn.
-
-`/tao:vet` and `/tao:think` each merge what used to be several separate commands (see below) — the old mode names (`challenge`, `skeptic`, `consensus`, `thinkdeep`) still work as `/tao <mode>` forwarding aliases, but have no standalone `/tao:<mode>` command anymore.
+Every mode is a dedicated `/tao:<mode> <args>` command — there is no bare `/tao` router command (removed: it only duplicated what each dedicated command already does standalone, at the cost of extra tokens per turn for anyone who used it).
 
 ### Claude-only modes (free via Claude Max)
 
 | Mode | Model | Description |
 |------|-------|-------------|
-| `debug` | Opus | Hypothesis-driven root-cause investigation |
-| `codereview` | Opus | Severity-ranked code quality and security review |
-| `secaudit` | Opus | OWASP-aligned security and compliance audit |
-| `analyze` | Opus | Architecture and technical debt analysis |
-| `planner` | Opus | Phased task planning with milestones |
-| `think` | Opus | Deep reasoning; vets its own answer by default, `--quick` skips vetting (formerly also `thinkdeep`) |
-| `requirements` | Sonnet | Business requirements → technical specifications |
-| `synthesize` | Sonnet | Reconcile competing viewpoints into a unified strategy |
-| `refactor` | Sonnet | Code smell detection and refactoring plan |
-| `precommit` | Sonnet | Pre-commit validation with go/no-go verdict |
-| `docgen` | Sonnet | API docs, architecture docs, inline docstrings |
-| `testgen` | Sonnet | Test suite with edge case analysis |
-| `tracer` | Sonnet | Execution flow and dependency tracing |
-| `chat` (see `/tao:brainstorm`) | Sonnet | Collaborative discussion and brainstorming |
-| `clink` (internal only, no standalone command) | Sonnet | CLI integration and bridging guidance |
-| `apilookup` | — | API/library quick-reference research |
-| `guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer, then synthesized |
+| `/tao:debug` | Opus | Hypothesis-driven root-cause investigation |
+| `/tao:codereview` | Opus | Severity-ranked code quality and security review |
+| `/tao:secaudit` | Opus | OWASP-aligned security and compliance audit |
+| `/tao:analyze` | Opus | Architecture and technical debt analysis |
+| `/tao:planner` | Opus | Phased task planning with milestones |
+| `/tao:think` | Opus | Deep reasoning; vets its own answer by default, `--quick` skips vetting |
+| `/tao:requirements` | Sonnet | Business requirements → technical specifications |
+| `/tao:synthesize` | Sonnet | Reconcile competing viewpoints into a unified strategy |
+| `/tao:refactor` | Sonnet | Code smell detection and refactoring plan |
+| `/tao:precommit` | Sonnet | Pre-commit validation with go/no-go verdict |
+| `/tao:docgen` | Sonnet | API docs, architecture docs, inline docstrings |
+| `/tao:testgen` | Sonnet | Test suite with edge case analysis |
+| `/tao:tracer` | Sonnet | Execution flow and dependency tracing |
+| `/tao:brainstorm` | Sonnet | Collaborative discussion and brainstorming |
+| `/tao:apilookup` | — | API/library quick-reference research |
+| `/tao:guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer, then synthesized |
 
-### Vet mode (variable voices — merges former vet/challenge/skeptic/consensus)
+### Vet mode (variable voices)
 
 `/tao:vet` stress-tests a proposal, statement, or decision. Depth picks the voice count:
 
@@ -79,13 +74,13 @@ Model assignments and the default Ollama model are configurable in `config/model
 ## Usage examples
 
 ```text
-/tao debug my API returns 500 on POST /users but only in production
-/tao codereview --files=src/auth --focus-areas=security
-/tao think should we use PostgreSQL or DynamoDB for user sessions?
-/tao vet should we migrate from REST to GraphQL? --depth=full --high-effort
-/tao vet we don't need integration tests for this module
-/tao vet the proposed caching strategy using Redis pub/sub
-/tao guru-chat should this codebase adopt a plugin architecture or stay monolithic?
+/tao:debug my API returns 500 on POST /users but only in production
+/tao:codereview --files=src/auth --focus-areas=security
+/tao:think should we use PostgreSQL or DynamoDB for user sessions?
+/tao:vet should we migrate from REST to GraphQL? --depth=full --high-effort
+/tao:vet we don't need integration tests for this module
+/tao:vet the proposed caching strategy using Redis pub/sub
+/tao:guru-chat should this codebase adopt a plugin architecture or stay monolithic?
 ```
 
 Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token budgets (external APIs).
@@ -96,9 +91,13 @@ Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token bu
 .claude-plugin/plugin.json   ← manifest (name, version, description)
 commands/                    ← slash command definitions (one per mode)
 agents/                      ← subagent definitions (dispatched by commands)
+references/                  ← dispatch templates read on demand (vet depths, think variants, guru-chat's rare branches) — cuts per-invocation token cost vs. inlining everything
 scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Ollama, Codex)
+scripts/guru_stall.py        ← guru-chat's team stall detector
 config/models.json           ← model assignments per role (edit to swap providers)
 ```
+
+Path resolution across commands defaults to `$HOME/code/claude-plugin-tao`; override with `TAO_PLUGIN_ROOT` (or the legacy `TAO_SCRIPTS`, which still works — the plugin root is derived from its parent) if installed elsewhere.
 
 Distributed via the [`joelpt-claude-plugins`](https://github.com/joelpt/joelpt-claude-plugins) marketplace.
 Bump `.claude-plugin/plugin.json` `version` (CalVer, minimum patch) on any change — the marketplace cache is keyed by version.

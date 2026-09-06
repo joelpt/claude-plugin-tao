@@ -1,43 +1,6 @@
 ---
 name: proposal-vetting-judge
-description: |
-  Use this agent when a proposal, design decision, architectural choice, or significant implementation plan needs rigorous vetting and validation before proceeding. This agent should be invoked proactively when:
-
-  <example>
-  Context: User is proposing a new database schema design for a critical feature.
-  user: "I'm thinking we should add a new table for caching user preferences with columns: user_id, preference_key, preference_value, created_at"
-  assistant: "This is a significant schema change that could impact performance and maintainability. Let me use the Task tool to launch the proposal-vetting-judge agent to thoroughly vet this design."
-  <commentary>
-  The proposal involves architectural decisions that need validation from multiple perspectives before implementation.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User is considering a major refactoring approach.
-  user: "I want to refactor the authentication system to use JWT tokens instead of session-based auth"
-  assistant: "This is a critical security and architecture decision. I'm going to use the proposal-vetting-judge agent to ensure we've considered all implications, security concerns, and implementation challenges."
-  <commentary>
-  Major architectural changes require thorough vetting to avoid costly mistakes.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User proposes a new feature implementation strategy.
-  user: "For the new real-time notification system, I'm thinking we should use WebSockets with a Redis pub/sub backend"
-  assistant: "Let me engage the proposal-vetting-judge agent to evaluate this technical approach from multiple angles including scalability, reliability, and operational complexity."
-  <commentary>
-  Technical architecture proposals benefit from multi-perspective analysis before commitment.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User suggests a performance optimization strategy.
-  user: "To speed up search, I want to denormalize the data and cache everything in memory"
-  assistant: "This optimization strategy has significant trade-offs. I'll use the proposal-vetting-judge agent to analyze the proposal comprehensively before we proceed."
-  <commentary>
-  Performance optimizations often have hidden costs that need thorough evaluation.
-  </commentary>
-  </example>
+description: Rigorously vets a proposal, design decision, or architectural choice by orchestrating multi-perspective consultation (skeptic, requirements-architect, synthesizer) before returning a reasoned recommendation. Dispatched explicitly by name (tao:proposal-vetting-judge) from /tao:vet's quick depth and /tao:think's default (non-quick) path via tao:thinker — never auto-selected by description matching.
 model: opus
 color: purple
 ---

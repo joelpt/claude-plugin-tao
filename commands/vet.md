@@ -38,16 +38,17 @@ State the chosen depth and a one-sentence reason before dispatching (e.g. "Depth
 Resolve the plugin root — needed to locate the reference file below for every depth (standard/full also reuse `$SCRIPTS`/`$CONFIG` for their external LLM calls):
 
 ```bash
-SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
-CONFIG="$SCRIPTS/../config/models.json"
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 ```
 
 ## Dispatch
 
-Read `$SCRIPTS/../references/vet-<depth>.md` for the exact Agent()/Bash() calls, role paths, results-handling, and output format for the chosen depth:
+Read `$PLUGIN_ROOT/references/vet-<depth>.md` for the exact Agent()/Bash() calls, role paths, results-handling, and output format for the chosen depth:
 
-- `$SCRIPTS/../references/vet-quick.md`
-- `$SCRIPTS/../references/vet-standard.md`
-- `$SCRIPTS/../references/vet-full.md`
+- `$PLUGIN_ROOT/references/vet-quick.md`
+- `$PLUGIN_ROOT/references/vet-standard.md`
+- `$PLUGIN_ROOT/references/vet-full.md`
 
 Do not construct the dispatch from memory or reuse another depth's template — each depth's exact prompts, role paths, and output formatting live only in its own reference file.

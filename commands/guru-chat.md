@@ -51,6 +51,12 @@ Do not duplicate one of the four fixed members. If nothing is clearly more relev
 
 ## Step 3 — Hold the roundtable (live peer-to-peer discussion)
 
+Resolve the plugin root once, used by 3d/3e/Step 6 below:
+
+```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+```
+
 **Preferred path — a real team that talks to itself.**
 The gurus discuss directly with each other; you (the orchestrator) stay quiet until they are all done.
 
@@ -90,20 +96,14 @@ Under the protocol above, peer chatter should not reach you (it is routed peer-t
 A teammate sometimes goes idle without sending its `FINAL POSITION` (it forgot, or it thinks it is done but never reported).
 Detect this and nudge.
 
-**Preferred — arm a `Monitor` pointed at the plugin's shipped detector script** (`scripts/guru_stall.py` — purely argv-driven, no per-team templating needed).
+**Preferred — arm a `Monitor` pointed at the plugin's shipped detector script** (`scripts/guru_stall.py` — purely argv-driven, no per-team templating needed; `$PLUGIN_ROOT` resolved at the top of Step 3).
 
-Resolve the script path (same pattern as elsewhere in tao):
-
-```bash
-SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
-```
-
-Arm the `Monitor` (substitute `<TEAM>` and the resolved `$SCRIPTS` path in the command string):
+Arm the `Monitor` (substitute `<TEAM>` and the resolved `$PLUGIN_ROOT` path in the command string):
 
 - `description`: `"guru roundtable stall detector"`
 - `timeout_ms`: `1800000`
 - `persistent`: `false`
-- `command`: `"python3 $SCRIPTS/guru_stall.py <TEAM> 5"`
+- `command`: `"python3 $PLUGIN_ROOT/scripts/guru_stall.py <TEAM> 5"`
 
 The Monitor emits `PROGRESS` when a new report-out lands, `STALL` (naming gurus who are idle but have not yet reported) after 90 s without new progress, and `ALL_REPORTED` then exits.
 On a `STALL` event: `SendMessage` each named guru: "Do you have anything further to discuss or report, or are you all done now? If you are done, send me your FINAL POSITION report-out now."
@@ -118,10 +118,7 @@ Typical runs settle in 5–15 min; the ~30 min cap is a ceiling, not the expecte
 
 ### 3e. Fallback path — parallel isolated subagents (no cross-talk)
 
-If `TeamCreate` is blocked, errors, or is unavailable for ANY reason:
-Report that explicitly to the user — e.g. "Team mode unavailable (`<reason>`); falling back to parallel independent subagents — the gurus give isolated opinions with no live discussion." Then dispatch all five luminaries in ONE message as parallel `Agent` calls (`subagent_type="general-purpose"`, `model="sonnet"`).
-Each prompt: the persona brief, the user's question, any `--files` context, and "Give your candid, in-character take. Be specific and technical." If `--high-effort`/`--thinking` is set, append the same `[[ ultrathink ]]` / 32,000-token instruction.
-Collect the five independent responses. There is no discussion or report-out protocol in this mode (no team, no Monitor, no deferred teardown — skip Step 6).
+If `TeamCreate` is blocked, errors, or is unavailable for ANY reason: read `$PLUGIN_ROOT/references/guru-chat-fallback.md` for the exact fallback dispatch (this branch is uncommon — the reference is not loaded unless it actually triggers).
 
 ## Step 4 — Synthesize
 
@@ -141,7 +138,7 @@ Self-contained output (mandatory): the caller sees ONLY your response — never 
 )
 ```
 
-The synthesizer's output already enforces the Self-Contained Output Contract: its "Perspective Analysis" section defines each guru's stance (20–400 words each) before any conclusion references it, so the caller — who never saw the roundtable directly — understands every position being weighed.
+The synthesizer's prompt above already mandates self-contained output: its "Perspective Analysis" section defines each guru's stance (20–400 words each) before any conclusion references it, so the caller — who never saw the roundtable directly — understands every position being weighed.
 
 ## Step 5 — Present
 
@@ -153,11 +150,10 @@ After presenting, if the live team path ran, tell the user exactly:
 
 ## Step 6 — Teardown (only after the user says 'done')
 
-Do NOT terminate the teammates when you present the synthesis. Leave them idle so the user can, if they wish, open an individual guru's conversation to see how its thinking evolved over the discussion.
+Do NOT terminate the teammates when you present the synthesis — leave them idle so the user can open an individual guru's conversation if they wish. This step runs on a **later, separate turn** (after the user explicitly signals they're done), not part of the initial dispatch, so shell state from Step 3 is gone — re-resolve the plugin root, then read the teardown reference:
 
-When the user says 'done' (or otherwise signals they are finished with this roundtable):
+```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+```
 
-1. Confirm the current session's active team is still `<TEAM>` (the unique name from Step 3a) before proceeding — if another `/tao` team-mode command ran in the interim, the active context may have shifted.
-2. `SendMessage` each teammate `message={type: "shutdown_request"}` (object form — no `summary`).
-3. `TaskStop` the Monitor if it is still running.
-4. `TeamDelete` once all teammates have shut down.
+Read `$PLUGIN_ROOT/references/guru-chat-teardown.md` for the exact shutdown sequence.

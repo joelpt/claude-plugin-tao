@@ -23,10 +23,10 @@ Deep reasoning for complex problems. Merges what were previously two separate co
 Resolve the plugin root, then read the reference file for the chosen variant:
 
 ```bash
-SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
 ```
 
-- No `--quick`: read `$SCRIPTS/../references/think-default.md`
-- `--quick` given: read `$SCRIPTS/../references/think-quick.md`
+- No `--quick`: read `$PLUGIN_ROOT/references/think-default.md`
+- `--quick` given: read `$PLUGIN_ROOT/references/think-quick.md`
 
 Do not construct the dispatch from memory or reuse the other variant's template — each variant's exact prompt and output format lives only in its own reference file.
