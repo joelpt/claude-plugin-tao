@@ -12,18 +12,24 @@ Agent(
 )
 ```
 
-**Voice 2 — Grok Challenger** (Bash tool):
+**Voice 2 — Grok Challenger** (Bash tool — self-contained; this is a separate tool call from Voice 1/3, so it resolves its own paths rather than relying on any earlier `Bash` call's shell state):
 
 ```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.standard.challenger \
   --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" \
   --max-tokens=<4096 standard | 16384 high-effort>
 ```
 
-**Voice 3 — Ollama Local** (Bash tool):
+**Voice 3 — Ollama Local** (Bash tool — self-contained, same reason):
 
 ```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.standard.local \
   --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." \

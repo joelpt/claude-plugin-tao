@@ -8,7 +8,7 @@ description: "Deep reasoning, optionally with vetting sub-agents"
 Deep reasoning for complex problems. Merges what were previously two separate commands:
 
 - **Default**: full pipeline — problem decomposition → proposal development → vetting via `proposal-vetting-judge` → final recommendation with confidence levels. Formerly `/tao:think`.
-- **`--quick`**: multi-stage reasoning without the vetting stage — hard algorithms, architecture decisions, security threat modeling, multi-variable optimization. Formerly `/tao:thinkdeep`. Use when you want the reasoning without paying for a second vetting pass — e.g. the problem is more "work through this carefully" than "stress-test a decision."
+- **`--quick`**: multi-stage reasoning without the vetting stage — hard algorithms, architecture decisions, security threat modeling, multi-variable optimization. Formerly the separate `/tao:thinkdeep` command, which no longer exists in any form (not standalone, not as a `/tao <mode>` alias) — use `/tao:think --quick` instead. Use when you want the reasoning without paying for a second vetting pass — e.g. the problem is more "work through this carefully" than "stress-test a decision."
 
 ## Argument handling
 
@@ -20,13 +20,16 @@ Deep reasoning for complex problems. Merges what were previously two separate co
 
 ## Dispatch
 
-Resolve the plugin root, then read the reference file for the chosen variant:
+**Note:** shell variables do not persist across separate tool calls, and the `Read` tool never expands `$VAR` in a path. Resolve the plugin root and load the variant's reference file in ONE self-contained `Bash` call — run exactly one of these two commands, whichever matches whether `--quick` was given:
 
 ```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+# No --quick:
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; cat "$PLUGIN_ROOT/references/think-default.md"
 ```
 
-- No `--quick`: read `$PLUGIN_ROOT/references/think-default.md`
-- `--quick` given: read `$PLUGIN_ROOT/references/think-quick.md`
+```bash
+# --quick given:
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; cat "$PLUGIN_ROOT/references/think-quick.md"
+```
 
-Do not construct the dispatch from memory or reuse the other variant's template — each variant's exact prompt and output format lives only in its own reference file.
+Follow the printed reference exactly — do not construct the dispatch from memory or reuse the other variant's template.

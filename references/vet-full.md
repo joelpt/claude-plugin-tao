@@ -12,27 +12,36 @@ Agent(
 )
 ```
 
-**Voice 2 — Grok Critic** (Bash tool):
+**Voice 2 — Grok Critic** (Bash tool — self-contained; this is a separate tool call from the other voices, so it resolves its own paths rather than relying on any earlier `Bash` call's shell state):
 
 ```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.full.critic \
   --system="Argue AGAINST this decision. Find flaws, risks, hidden costs, and failure modes. Be direct." \
   --max-tokens=<4096 standard | 16384 high-effort>
 ```
 
-**Voice 3 — Codex/GPT Analyst** (Bash tool):
+**Voice 3 — Codex/GPT Analyst** (Bash tool — self-contained, same reason):
 
 ```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.full.analyst \
   --system="Provide neutral, balanced analysis of this decision. Weigh evidence objectively without advocacy." \
   --max-tokens=<4096 standard | 16384 high-effort>
 ```
 
-**Voice 4 — Ollama Local** (Bash tool):
+**Voice 4 — Ollama Local** (Bash tool — self-contained, same reason):
 
 ```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+SCRIPTS="$PLUGIN_ROOT/scripts"
+CONFIG="$PLUGIN_ROOT/config/models.json"
 printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.full.local \
   --system="Provide your independent perspective on this decision. Focus on practical implementation realities." \

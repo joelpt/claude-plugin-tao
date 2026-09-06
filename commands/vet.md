@@ -7,6 +7,8 @@ description: "Vet a proposal, 1-4 voices, depth auto-picked"
 
 Multi-perspective proposal vetting and validation — merges what were previously four separate commands (`vet`, `challenge`, `skeptic`, `consensus`) into one depth dial. Stress-tests decisions, statements, architectural choices, and implementation plans before commitment.
 
+The old command names (`/tao:challenge`, `/tao:skeptic`, `/tao:consensus`) no longer work in any form — not as standalone commands, not as `/tao <mode>` aliases (the bare router is gone too). The "Formerly" column below is a migration pointer only; use `--depth` to get the equivalent behavior.
+
 ## Depth levels
 
 | Depth | Voices | Agent(s) | Formerly |
@@ -33,22 +35,15 @@ Read the input and classify it before dispatching. Judgment call, not a rigid ru
 
 State the chosen depth and a one-sentence reason before dispatching (e.g. "Depth: standard — architectural choice with real but recoverable cost if wrong").
 
-## Setup
+## Dispatch
 
-Resolve the plugin root — needed to locate the reference file below for every depth (standard/full also reuse `$SCRIPTS`/`$CONFIG` for their external LLM calls):
+**Note:** shell variables do not persist across separate tool calls, and the `Read` tool never expands `$VAR` in a path — it takes a literal string. So resolve the plugin root and load the depth's reference file in ONE self-contained `Bash` call (never split this across a `Bash` step and a later `Read` step):
 
 ```bash
 PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
-SCRIPTS="$PLUGIN_ROOT/scripts"
-CONFIG="$PLUGIN_ROOT/config/models.json"
+cat "$PLUGIN_ROOT/references/vet-<depth>.md"
 ```
 
-## Dispatch
+(substitute `<depth>` with `quick`, `standard`, or `full`). This prints the exact `Agent()`/`Bash()` calls, role paths, results-handling, and output format for the chosen depth — follow it exactly, and do not construct the dispatch from memory or reuse another depth's template.
 
-Read `$PLUGIN_ROOT/references/vet-<depth>.md` for the exact Agent()/Bash() calls, role paths, results-handling, and output format for the chosen depth:
-
-- `$PLUGIN_ROOT/references/vet-quick.md`
-- `$PLUGIN_ROOT/references/vet-standard.md`
-- `$PLUGIN_ROOT/references/vet-full.md`
-
-Do not construct the dispatch from memory or reuse another depth's template — each depth's exact prompts, role paths, and output formatting live only in its own reference file.
+For standard/full, the printed reference's `Bash` calls also need `$SCRIPTS`/`$CONFIG` — since each of those is its own separate tool call too (dispatched in parallel, no shared shell state), the reference file includes the resolution inline in every `Bash` block that needs it. Don't strip it out when copying the command.

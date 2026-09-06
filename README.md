@@ -100,7 +100,7 @@ config/models.json           ← model assignments per role (edit to swap provid
 Path resolution across commands defaults to `$HOME/code/claude-plugin-tao`; override with `TAO_PLUGIN_ROOT` (or the legacy `TAO_SCRIPTS`, which still works — the plugin root is derived from its parent) if installed elsewhere.
 
 Distributed via the [`joelpt-claude-plugins`](https://github.com/joelpt/joelpt-claude-plugins) marketplace.
-Bump `.claude-plugin/plugin.json` `version` (CalVer, minimum patch) on any change — the marketplace cache is keyed by version.
+Bump `.claude-plugin/plugin.json` `version` (CalVer: `YYYY.MM.DD.N`, `N` incrementing per same-day commit) on any change — the marketplace cache is keyed by version.
 
 ## License
 

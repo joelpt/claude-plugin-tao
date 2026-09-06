@@ -51,11 +51,7 @@ Do not duplicate one of the four fixed members. If nothing is clearly more relev
 
 ## Step 3 — Hold the roundtable (live peer-to-peer discussion)
 
-Resolve the plugin root once, used by 3d/3e/Step 6 below:
-
-```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
-```
+**Note:** shell variables do not persist across separate tool calls (3a/3d/3e/Step 6 below are each their own tool call), so 3d, 3e, and Step 6 each resolve the plugin root inline rather than relying on one shared resolution.
 
 **Preferred path — a real team that talks to itself.**
 The gurus discuss directly with each other; you (the orchestrator) stay quiet until they are all done.
@@ -63,13 +59,13 @@ The gurus discuss directly with each other; you (the orchestrator) stay quiet un
 ### 3a. Create a uniquely-named team
 
 All teams across all Claude sessions share `~/.claude/teams/`, so a fixed name collides with any concurrent session.
-Generate a unique name ONCE and reuse it verbatim for `TeamCreate`, every `Agent` spawn (`team_name=`), the Monitor path, the nudge `SendMessage` calls, and teardown:
+Generate a unique name ONCE, print it, then reuse that literal printed value everywhere `<TEAM>` appears below (`TeamCreate`, every `Agent` spawn's `team_name=`, the Monitor command, the nudge `SendMessage` calls, and teardown) — shell variables don't persist across the separate tool calls those steps run as, so `$TEAM` itself is not usable outside this one command:
 
 ```bash
-TEAM="guru-roundtable-$(date -u +%Y%m%d-%H%M%S)-$RANDOM"
+TEAM="guru-roundtable-$(date -u +%Y%m%d-%H%M%S)-$RANDOM"; echo "$TEAM"
 ```
 
-Then `TeamCreate(team_name="<TEAM>", description="<short topic>")`.
+Then `TeamCreate(team_name="<TEAM>", description="<short topic>")`, substituting `<TEAM>` with the printed value.
 
 ### 3b. Spawn all five luminaries in ONE message (parallel)
 
@@ -96,14 +92,19 @@ Under the protocol above, peer chatter should not reach you (it is routed peer-t
 A teammate sometimes goes idle without sending its `FINAL POSITION` (it forgot, or it thinks it is done but never reported).
 Detect this and nudge.
 
-**Preferred — arm a `Monitor` pointed at the plugin's shipped detector script** (`scripts/guru_stall.py` — purely argv-driven, no per-team templating needed; `$PLUGIN_ROOT` resolved at the top of Step 3).
+**Preferred — arm a `Monitor` pointed at the plugin's shipped detector script** (`scripts/guru_stall.py` — purely argv-driven, no per-team templating needed).
 
-Arm the `Monitor` (substitute `<TEAM>` and the resolved `$PLUGIN_ROOT` path in the command string):
+Arm the `Monitor` — the `command` value is itself a shell command that runs as its own process (no inherited shell state), so it resolves the plugin root inline before running the script. Substitute `<TEAM>` with the actual team name. Set `command` to exactly this shell command text (a single string value — do not add your own quote-escaping beyond what your tool call's own JSON encoding does automatically):
+
+```text
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; python3 "$PLUGIN_ROOT/scripts/guru_stall.py" <TEAM> 5
+```
+
+Other `Monitor` fields:
 
 - `description`: `"guru roundtable stall detector"`
 - `timeout_ms`: `1800000`
 - `persistent`: `false`
-- `command`: `"python3 $PLUGIN_ROOT/scripts/guru_stall.py <TEAM> 5"`
 
 The Monitor emits `PROGRESS` when a new report-out lands, `STALL` (naming gurus who are idle but have not yet reported) after 90 s without new progress, and `ALL_REPORTED` then exits.
 On a `STALL` event: `SendMessage` each named guru: "Do you have anything further to discuss or report, or are you all done now? If you are done, send me your FINAL POSITION report-out now."
@@ -118,7 +119,11 @@ Typical runs settle in 5–15 min; the ~30 min cap is a ceiling, not the expecte
 
 ### 3e. Fallback path — parallel isolated subagents (no cross-talk)
 
-If `TeamCreate` is blocked, errors, or is unavailable for ANY reason: read `$PLUGIN_ROOT/references/guru-chat-fallback.md` for the exact fallback dispatch (this branch is uncommon — the reference is not loaded unless it actually triggers).
+If `TeamCreate` is blocked, errors, or is unavailable for ANY reason, run this self-contained `Bash` call (uncommon branch — the reference is not loaded unless it actually triggers) and follow what it prints:
+
+```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; cat "$PLUGIN_ROOT/references/guru-chat-fallback.md"
+```
 
 ## Step 4 — Synthesize
 
@@ -150,10 +155,8 @@ After presenting, if the live team path ran, tell the user exactly:
 
 ## Step 6 — Teardown (only after the user says 'done')
 
-Do NOT terminate the teammates when you present the synthesis — leave them idle so the user can open an individual guru's conversation if they wish. This step runs on a **later, separate turn** (after the user explicitly signals they're done), not part of the initial dispatch, so shell state from Step 3 is gone — re-resolve the plugin root, then read the teardown reference:
+Do NOT terminate the teammates when you present the synthesis — leave them idle so the user can open an individual guru's conversation if they wish. This step runs on a **later, separate turn** (after the user explicitly signals they're done), not part of the initial dispatch — resolve the plugin root and load the teardown reference in ONE self-contained `Bash` call, then follow what it prints:
 
 ```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; cat "$PLUGIN_ROOT/references/guru-chat-teardown.md"
 ```
-
-Read `$PLUGIN_ROOT/references/guru-chat-teardown.md` for the exact shutdown sequence.
