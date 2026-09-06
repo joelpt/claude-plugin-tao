@@ -7,6 +7,8 @@ description: "Multi-model reasoning router with many modes"
 
 Multi-model reasoning workflows that route to optimal Claude model tiers (Opus/Sonnet/Haiku) for most task types, with external LLM voices added for consensus and adversarial analysis where epistemic diversity matters most.
 
+**Tip:** prefer `/tao:<mode>` over `/tao <mode>` when a dedicated command exists (see the Mode Routing table) — it skips loading this router file entirely.
+
 ## Script Path Resolution
 
 External LLM calls use `scripts/llm_call.py` and read model assignments from `config/models.json`. Resolve paths at invocation time:
@@ -57,21 +59,12 @@ Arguments can be passed in two ways:
    - `/tao vet the proposed caching strategy using Redis pub/sub` (depth chosen dynamically)
    - `/tao vet should we migrate from REST to GraphQL? --depth=full --high-effort` (force full 4-voice consensus depth)
 
-2. **Explicit flags**: For precision or when combining multiple arguments:
-   - `--high-effort` → Enable extended thinking for Claude voices (`[[ ultrathink ]]`, 32K thinking tokens) and 16K max_tokens for external API calls. Use when the decision is high-stakes or the analysis is inherently complex.
-   - `--thinking` or `thinking` → Alias for `--high-effort`
-   - `--files=<paths>` or `--file-paths=<paths>` → Comma-separated file/directory paths for the agent to analyze
+2. **Explicit flags**: universal ones apply across most modes —
+   - `--high-effort` (alias `--thinking`) → Enable extended thinking for Claude voices (`[[ ultrathink ]]`, 32K thinking tokens) and 16K max_tokens for external API calls. Use when the decision is high-stakes or the analysis is inherently complex.
+   - `--files=<paths>` (alias `--file-paths=<paths>`) → Comma-separated file/directory paths for the agent to analyze
    - `--focus-areas=<areas>` → Comma-separated areas to focus on
-   - `--issue=<text>` → Bug description (debug mode)
-   - `--problem=<text>` → Problem statement (think mode, with or without `--quick`)
-   - `--task=<text>` → Task description (planner mode)
-   - `--proposal=<text>` → Proposal/statement/question to vet (vet mode and its challenge/skeptic/consensus aliases)
-   - `--depth=quick|standard|full` or `--voices=1|3|4` → Force a vet depth, skipping dynamic depth selection (vet mode only; ignored/implied for the challenge/skeptic/consensus aliases)
-   - `--quick` → Skip the vetting stage (think mode only; equivalent to the old thinkdeep mode)
-   - `--query=<text>` → API/library to research (apilookup mode)
-   - `--prompt=<text>` → Custom prompt (chat, docgen, secaudit, tracer, clink modes)
-   - `--error-logs=<text>` → Error logs (debug mode)
-   - `--cli-name=<name>` → Target CLI (clink mode)
+
+   Mode-specific flags (e.g. `--depth=`/`--voices=` for vet, `--quick` for think, `--issue=` for debug, `--cli-name=` for clink) vary per mode — see that mode's own `commands/<mode>.md` (or `commands/brainstorm.md` for chat) for its full flag list.
 
 When using natural language, the entire text after the mode name is passed as the primary argument to the agent (e.g., as the issue for debug, the problem for think, the proposal/statement/question for vet and its aliases, etc.).
 
@@ -93,27 +86,11 @@ Never report "X is strongest, Y was rejected" without the reader having first be
 
 ### Standard Modes (Single Agent)
 
-For most modes, invoke the Agent tool like this:
-
-```text
-Agent(
-  subagent_type="tao:<agent-name>",
-  model="<model-tier>",
-  prompt="<compiled prompt with all arguments and context>"
-)
-```
-
-Include in the agent prompt:
-
-1. The mode-specific arguments (issue, problem, files, etc.)
-2. Whether high-effort/thinking mode is enabled (add ultrathink instruction if so)
-3. Any file paths the agent should read using Read/Grep tools
-4. The focus areas if specified
-5. Output format instruction — always tell the agent how to format its response for human consumption. The dedicated command files (e.g. `commands/debug.md`, `commands/codereview.md`) contain per-mode format specs; use those as the reference. Never let an agent return a raw JSON blob as its final user-facing response.
+For debug, codereview, secaudit, analyze, planner, requirements, synthesize, refactor, precommit, docgen, testgen, tracer, and chat: read that mode's dedicated command file (`commands/<mode>.md`, or `commands/brainstorm.md` for chat) for its exact `Agent()` call and output-format instructions — do not construct the dispatch from memory. Use the Mode Routing table's agent/model columns only if the file itself omits one.
 
 ### Vet Mode (and challenge/skeptic/consensus aliases)
 
-**Preferred invocation: `/tao:vet`** — the standalone command in `commands/vet.md` contains the full depth-dial dispatch logic (quick=1 voice, standard=3 voices, full=4 voices) and the dynamic depth-selection rule used when no depth is specified.
+**Preferred invocation: `/tao:vet`** — the standalone command in `commands/vet.md` has the depth table and the dynamic depth-selection rule used when no depth is specified; the actual dispatch templates (quick=1 voice, standard=3 voices, full=4 voices) live in `references/vet-quick.md`, `references/vet-standard.md`, `references/vet-full.md`, which `commands/vet.md` points to for whichever depth is chosen.
 
 When `/tao vet` is invoked (mode argument rather than dedicated command): forward to the same logic in `commands/vet.md`, including its Step 0 dynamic depth decision when `--depth`/`--voices` is absent.
 
@@ -127,7 +104,7 @@ Model assignments for all depths are in `config/models.json` under `vet.quick` /
 
 ### Think Mode (and thinkdeep alias)
 
-**Preferred invocation: `/tao:think`** — the standalone command in `commands/think.md` contains both the default (vetted) and `--quick` (unvetted) dispatch logic.
+**Preferred invocation: `/tao:think`** — the standalone command in `commands/think.md` has the argument handling; the default (vetted) and `--quick` (unvetted) dispatch templates live in `references/think-default.md` and `references/think-quick.md`, which `commands/think.md` points to for whichever variant applies.
 
 When `/tao think` is invoked (mode argument rather than dedicated command): forward to the same logic in `commands/think.md`.
 

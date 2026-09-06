@@ -90,59 +90,20 @@ Under the protocol above, peer chatter should not reach you (it is routed peer-t
 A teammate sometimes goes idle without sending its `FINAL POSITION` (it forgot, or it thinks it is done but never reported).
 Detect this and nudge.
 
-**Preferred — write a detector script, then arm a `Monitor`.**
+**Preferred — arm a `Monitor` pointed at the plugin's shipped detector script** (`scripts/guru_stall.py` — purely argv-driven, no per-team templating needed).
 
-The Monitor `command` param is a plain JSON string; it cannot safely embed heredocs or bash+python composites.
-Write the logic to a temp file first, then point Monitor at it.
-
-**Step 1 — `Bash`: write the detector script** (substitute `<TEAM>` with the actual team name):
+Resolve the script path (same pattern as elsewhere in tao):
 
 ```bash
-TEAM="<TEAM>"
-cat > "/tmp/guru_stall_${TEAM}.py" << 'EOF'
-#!/usr/bin/env python3
-import json, os, sys, time
-
-TEAM = sys.argv[1]
-N = int(sys.argv[2])
-LEAD = f"{os.environ['HOME']}/.claude/teams/{TEAM}/inboxes/team-lead.json"
-prev = -1
-quiet = 0
-
-while True:
-    try:
-        m = json.load(open(LEAD)) if os.path.exists(LEAD) else []
-    except Exception:
-        m = []
-    done = sorted({x['from'] for x in m
-                   if 'FINAL POSITION' in x.get('text', '')
-                   and 'idle_notification' not in x.get('text', '')})
-    idle = sorted({x['from'] for x in m
-                   if 'idle_notification' in x.get('text', '')
-                   and x['from'] not in done})
-    cnt = len(done)
-    if cnt != prev:
-        print(f"PROGRESS reported={cnt}/{N} [{','.join(done)}]", flush=True)
-        prev = cnt
-        quiet = 0
-    else:
-        quiet += 15
-    if cnt >= N:
-        print(f"ALL_REPORTED [{','.join(done)}]", flush=True)
-        break
-    if quiet >= 90:
-        print(f"STALL reported={cnt}/{N} idle_not_reported=[{','.join(idle)}]", flush=True)
-        quiet = 0
-    time.sleep(15)
-EOF
+SCRIPTS="${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}"
 ```
 
-**Step 2 — arm the `Monitor`** (substitute `<TEAM>` in the command string):
+Arm the `Monitor` (substitute `<TEAM>` and the resolved `$SCRIPTS` path in the command string):
 
 - `description`: `"guru roundtable stall detector"`
 - `timeout_ms`: `1800000`
 - `persistent`: `false`
-- `command`: `"python3 /tmp/guru_stall_<TEAM>.py <TEAM> 5"`
+- `command`: `"python3 $SCRIPTS/guru_stall.py <TEAM> 5"`
 
 The Monitor emits `PROGRESS` when a new report-out lands, `STALL` (naming gurus who are idle but have not yet reported) after 90 s without new progress, and `ALL_REPORTED` then exits.
 On a `STALL` event: `SendMessage` each named guru: "Do you have anything further to discuss or report, or are you all done now? If you are done, send me your FINAL POSITION report-out now."

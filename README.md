@@ -17,6 +17,8 @@ Requires read access to the private marketplace repo (`gh auth login`).
 
 All modes are available as `/tao <mode> <args>`; most also have a dedicated `/tao:<mode> <args>` command. `chat` is exposed as `/tao:brainstorm`. `clink` has no standalone command — it's internal-only, reachable via `/tao clink` (used by tao/Claude for CLI-bridging guidance).
 
+**Prefer the dedicated `/tao:<mode>` form when one exists** — it skips loading the `/tao` router entirely, using noticeably fewer tokens per turn.
+
 `/tao:vet` and `/tao:think` each merge what used to be several separate commands (see below) — the old mode names (`challenge`, `skeptic`, `consensus`, `thinkdeep`) still work as `/tao <mode>` forwarding aliases, but have no standalone `/tao:<mode>` command anymore.
 
 ### Claude-only modes (free via Claude Max)
