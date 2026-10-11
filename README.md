@@ -45,8 +45,8 @@ Every mode is a dedicated `/tao:<mode> <args>` command — there is no bare `/ta
 | Depth | Voices | Formerly | When |
 |------|--------|----------|------|
 | `quick` | 1 — Claude Opus | `vet` | Narrow, low-stakes, easily reversible |
-| `standard` | 3 — Claude Opus + Grok 4.3 + Ollama | `challenge`, `skeptic` | Most real vetting requests — architecture/design choices, real-but-recoverable cost if wrong |
-| `full` | 4 — Claude advocate + Grok critic + Codex/GPT analyst + Ollama, synthesized | `consensus` | High-stakes, hard-to-reverse, or the user explicitly wants multiple independent opinions |
+| `standard` | 3 — Claude Opus + Grok 4.3 + local model | `challenge`, `skeptic` | Most real vetting requests — architecture/design choices, real-but-recoverable cost if wrong |
+| `full` | 4 — Claude advocate + Grok critic + Codex/GPT analyst + local model, synthesized | `consensus` | High-stakes, hard-to-reverse, or the user explicitly wants multiple independent opinions |
 
 Pass `--depth=quick|standard|full` (or `--voices=1|3|4`) to force a depth; **omit it and tao decides dynamically** based on the stakes and phrasing of what you're asking it to vet. Multi-voice depths degrade gracefully — if an external voice is unavailable, tao notes it and continues with the remaining voices.
 
@@ -62,14 +62,25 @@ echo 'export OPENAI_API_KEY=<your-key>' >> ~/.zshenv
 # Groq LPU inference (very fast; alternative to Ollama for local-fast voice)
 echo 'export GROQ_API_KEY=<your-key>' >> ~/.zshenv
 
-# Ollama local voice
+# Local voice, option 1: Ollama
 ollama pull qwen3:32b && ollama serve
+
+# Local voice, option 2: LM Studio (JIT-loads the model, unloads it after 10 idle minutes)
+lms ls                                   # installed model keys
+lms get <model>                          # download one, then set it as the model of the vet.*.local roles
+lms server start                         # or open the LM Studio app
+# Optional: LMSTUDIO_BASE_URL (default: the port in LM Studio's server config, else 1234),
+#           LMSTUDIO_TTL=600 (idle seconds before unload), LMSTUDIO_TIMEOUT=570
+# Set the model's context length in LM Studio's model settings (a plan-sized prompt needs 32768 or more);
+# loading a model by hand with `lms load` disables the idle unload. LM Studio and tao share one resident
+# model, so a tao call can evict a model you are chatting with, and the reverse.
 
 # Codex/GPT analyst voice (OpenAI subscription, no per-token cost)
 claude plugin install codex@openai-codex
 ```
 
-Model assignments and the default Ollama model are configurable in `config/models.json`.
+Model assignments (and the default Ollama model) are configurable in `config/models.json`. The `/tao:vet` local voice
+reports its provider and model in its own heading and run stats.
 
 ## Usage examples
 
@@ -92,7 +103,7 @@ Pass `--high-effort` to any mode for extended thinking (Claude) and 16K token bu
 commands/                    ← slash command definitions (one per mode)
 agents/                      ← subagent definitions (dispatched by commands)
 references/                  ← dispatch templates read on demand (vet depths, think variants, guru-chat's rare branches) — cuts per-invocation token cost vs. inlining everything
-scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Ollama, Codex)
+scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Ollama, LM Studio, Codex)
 scripts/guru_stall.py        ← guru-chat's team stall detector
 config/models.json           ← model assignments per role (edit to swap providers)
 ```

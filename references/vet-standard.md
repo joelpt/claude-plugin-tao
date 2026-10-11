@@ -1,6 +1,8 @@
-# Vet — Standard depth (3 voices — Claude + Grok + Ollama)
+# Vet — Standard depth (3 voices — Claude + Grok + a local model)
 
 Dispatch all three in ONE message (parallel tool calls).
+
+**Passing the input to a Bash voice.** Give the text to `llm_call.py` through a *quoted heredoc* whose delimiter is a fresh random token you invent for each call (for example `TAO_7QK2M9_EOF`), never a fixed literal. A double-quoted shell string would execute backticks and `$(...)` inside the vetted text, and a fixed delimiter can collide with a line of the input. Replace `<input>` with the text itself, verbatim.
 
 **Voice 1 — Claude Skeptic** (Agent tool):
 
@@ -18,27 +20,31 @@ Agent(
 PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
 SCRIPTS="$PLUGIN_ROOT/scripts"
 CONFIG="$PLUGIN_ROOT/config/models.json"
-printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
+python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.standard.challenger \
   --system="Be a sharp senior skeptic. What could go wrong? What assumptions are wrong? What would you reject outright?" \
-  --max-tokens=<4096 standard | 16384 high-effort>
+  --max-tokens=<4096 standard | 16384 high-effort> <<'TAO_RANDOM_EOF'
+<input>
+TAO_RANDOM_EOF
 ```
 
-**Voice 3 — Ollama Local** (Bash tool — self-contained, same reason):
+**Voice 3 — Local model** (Bash tool — self-contained, same reason). Set the Bash tool's `timeout` to `600000` (10 minutes): a local 27-31B model can take minutes on a plan-sized prompt, and the default 120 s would kill the call.
 
 ```bash
 PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
 SCRIPTS="$PLUGIN_ROOT/scripts"
 CONFIG="$PLUGIN_ROOT/config/models.json"
-printf '%s\n' "<input>" | python3 "$SCRIPTS/llm_call.py" \
+python3 "$SCRIPTS/llm_call.py" \
   --config "$CONFIG" --role=vet.standard.local \
   --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." \
-  --max-tokens=<8192 standard | 16384 high-effort>
+  --max-tokens=<8192 standard | 16384 high-effort> <<'TAO_RANDOM_EOF'
+<input>
+TAO_RANDOM_EOF
 ```
 
 ## Handle results
 
-For any Bash call that exits non-zero: substitute `[Voice unavailable — check API key or Ollama. Edit config/models.json to change provider.]`
+For any Bash call that exits non-zero: substitute `[Voice unavailable — <the ERROR line the script printed>. Edit config/models.json to change provider.]`. The local voice's error line names the exact fix (for example `lms get`, `lms server start`, or raising the context length), so quote it rather than guessing a cause.
 
 ## Present results
 
@@ -51,8 +57,8 @@ Show all three responses as human-readable text with clear attribution, then a m
 ## Grok 4.3
 <grok response verbatim, or "[Grok unavailable: check XAI_API_KEY in ~/.zshenv]">
 
-## Ollama [model-name]
-<ollama response verbatim, or "[Ollama unavailable: check ollama serve is running]">
+## Local [provider/model]
+<local response verbatim, or "[Local voice unavailable: <the error line>]">
 
 ## Points raised by multiple models
 <deduplicated list — note which models raised each point, e.g. "(Claude, Grok)">
@@ -66,7 +72,7 @@ Show all three responses as human-readable text with clear attribution, then a m
 
 ## Run stats
 
-Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`). Use `—` for the Claude voice.
+Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`). Use `—` for the Claude voice. Take the Local row's provider and model from its stats line.
 
 ```text
 ## Run stats
@@ -74,7 +80,7 @@ Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`)
 |---------|----------|--------------|-----------|------------|--------|-------|
 | Claude  | claude   | opus         | —         | —          | —      | —     |
 | Grok    | xai      | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
-| Ollama  | ollama   | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
+| Local   | <provider> | <model>    | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
 ```
 
 If a voice was unavailable, omit its row or mark all cells `unavailable`.

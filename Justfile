@@ -4,12 +4,13 @@
 run: test lint
     @echo "Plugin is ready."
 
-# Validate all Python scripts parse without errors
+# Validate all Python scripts parse, then run the unit tests (stdlib unittest, no network)
 test:
     python3 -m py_compile scripts/llm_call.py
     python3 -m py_compile scripts/models.py
     python3 -c "import json; json.load(open('config/models.json'))"
     python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+    python3 -m unittest discover -s tests -v
     @echo "All checks passed."
 
 # Smoke test: call llm_call.py with --help (no API needed)

@@ -4,7 +4,7 @@
 Reads prompt from stdin, writes response to stdout.
 
 Usage (explicit provider):
-  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|openai|groq|ollama|codex> [--model=<name>]
+  echo "prompt" | python3 llm_call.py --provider=<gemini|xai|openai|groq|ollama|lmstudio|codex> [--model=<name>]
       [--system=<text>] [--max-tokens=<int>]
 
 Usage (config-based role):
@@ -19,6 +19,9 @@ API keys (from ~/.zshenv — never hardcoded):
   GROQ_API_KEY    — Groq LPU inference (api.groq.com). Default model: meta-llama/llama-4-scout-17b-16e-instruct.
   (Codex uses the OpenAI Codex CLI companion — no key var needed here)
   (Ollama needs no key — local endpoint at localhost:11434)
+  (LM Studio needs no key — OpenAI-compatible endpoint; URL from LMSTUDIO_BASE_URL, else the port in
+   ~/.lmstudio/.internal/http-server-config.json, else 1234. A model is required: `lms ls` lists keys.
+   LMSTUDIO_TTL (default 600 s idle unload), LMSTUDIO_TIMEOUT, LMSTUDIO_TEMPERATURE are optional.)
 """
 
 import argparse
@@ -95,7 +98,7 @@ def _emit_stats(
     """Print a machine-parseable stats line to stderr for tao run summaries.
 
     Args:
-        provider: Provider name (gemini, xai, openai, groq, ollama, codex).
+        provider: Provider name (gemini, xai, openai, groq, ollama, lmstudio, codex).
         model: Model identifier string.
         tok_in: Input token count, or "?" if unavailable.
         tok_out: Output token count, or "?" if unavailable.
@@ -334,6 +337,34 @@ def call_groq(prompt: str, model: str | None, system: str | None, max_tokens: in
     return content
 
 
+def _estimate_tokens(text: str) -> int:
+    """Return a rough token count (about 4 characters per token).
+
+    Used only for pre-flight sizing and warnings; real counts come from the server's usage report.
+
+    Args:
+        text: The text to size.
+
+    Returns:
+        An estimated token count, at least 1.
+    """
+    return max(1, len(text) // 4)
+
+
+def _ollama_num_ctx(required_tokens: int) -> int:
+    """Return the context window to request from Ollama for a prompt plus its output budget.
+
+    Args:
+        required_tokens: Estimated prompt tokens plus the output token budget.
+
+    Returns:
+        A multiple of 2048 between 16384 and 131072 that covers the requirement with headroom.
+    """
+    padded = required_tokens + 512
+    rounded = -(-padded // 2048) * 2048
+    return min(131072, max(16384, rounded))
+
+
 def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
     """Call the local Ollama /api/chat endpoint and return the assistant message content.
 
@@ -359,12 +390,16 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     # Add a fixed 8192-token thinking overhead so CoT doesn't crowd out the response.
     num_predict = max_tokens + 8192 if thinking else max_tokens
 
+    # Ollama silently truncates a prompt that exceeds the context it was loaded with, so size it explicitly.
+    num_ctx = _ollama_num_ctx(_estimate_tokens((system or "") + prompt) + num_predict)
+
     body: dict[str, object] = {
         "model": model,
         "messages": messages,
         "stream": False,
         "think": thinking,
-        "options": {"num_predict": num_predict},
+        "keep_alive": "10m",
+        "options": {"num_predict": num_predict, "num_ctx": num_ctx},
     }
     data = json.dumps(body).encode()
     req = urllib.request.Request(
@@ -378,6 +413,15 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     try:
         with _urlopen(req, timeout=300, _retries=_retries) as resp:
             result = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        # HTTPError is a URLError subclass: it must be handled first, or a 404 (model not pulled)
+        # is misreported as "server not reachable".
+        detail = e.read().decode(errors="replace")[:500]
+        if e.code == 404:
+            raise RuntimeError(
+                f"Ollama has no model '{model}' (HTTP 404: {detail}). Run: ollama pull {model}"
+            ) from e
+        raise RuntimeError(f"Ollama HTTP {e.code}: {detail}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(
             f"Ollama not reachable at localhost:11434 ({e.reason}). "
@@ -389,11 +433,22 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     if error_msg:
         raise RuntimeError(f"Ollama error: {error_msg}")
     msg = result.get("message", {})
-    content = msg.get("content") or msg.get("thinking")
+    content = msg.get("content")
     if not content:
+        if msg.get("thinking"):
+            raise RuntimeError(
+                "Ollama returned only reasoning, no answer "
+                f"(done_reason={result.get('done_reason', 'unknown')}). The token budget ran out while thinking: "
+                "raise --max-tokens or use a non-thinking model."
+            )
         raise RuntimeError(f"Ollama returned no message content (response: {result})")
 
     tok_in = result.get("prompt_eval_count", "?")
+    if isinstance(tok_in, int) and tok_in >= num_ctx - 64:
+        raise RuntimeError(
+            f"Ollama counted {tok_in} prompt tokens against a {num_ctx}-token context: the input was truncated, "
+            "so the review would cover a partial prompt."
+        )
     tok_out = result.get("eval_count", "?")
     # Use Ollama's native eval_duration (nanoseconds) for accurate GPU throughput.
     eval_ns = result.get("eval_duration")
@@ -404,6 +459,193 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
     else:
         tok_per_s = "?"
     _emit_stats("ollama", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
+    return content
+
+
+#: Idle seconds before LM Studio unloads a model that this provider JIT-loaded (override: LMSTUDIO_TTL).
+LMSTUDIO_DEFAULT_TTL_SECONDS = 600
+#: Extra output tokens granted so a thinking model's reasoning cannot crowd out the answer.
+LMSTUDIO_THINKING_OVERHEAD = 8192
+#: Socket read timeout; stays under the 600 s Bash-tool timeout the vet references set (override: LMSTUDIO_TIMEOUT).
+LMSTUDIO_TIMEOUT_SECONDS = 570
+_LMSTUDIO_SERVER_CONFIG = Path.home() / ".lmstudio" / ".internal" / "http-server-config.json"
+
+
+def _lmstudio_base_url(config_path: Path | None = None) -> str:
+    """Return LM Studio's OpenAI-compatible base URL (ending in /v1, no trailing slash).
+
+    Resolution order: ``LMSTUDIO_BASE_URL``, then the port in LM Studio's own server config, then 1234.
+
+    Args:
+        config_path: Override for the server config location (tests).
+
+    Returns:
+        The base URL.
+    """
+    env = os.environ.get("LMSTUDIO_BASE_URL")
+    if env:
+        return env.rstrip("/")
+    port = 1234
+    try:
+        raw = json.loads((config_path or _LMSTUDIO_SERVER_CONFIG).read_text(encoding="utf-8"))
+        port = int(raw.get("port", port))
+    except (OSError, ValueError, AttributeError):
+        pass
+    return f"http://127.0.0.1:{port}/v1"
+
+
+def _lmstudio_loaded_context(base_url: str, model: str) -> int | None:
+    """Return the context length of *model*'s loaded instance, or None if it is not loaded or unknown.
+
+    Args:
+        base_url: The OpenAI-compatible base URL (ending in /v1).
+        model: The model key.
+
+    Returns:
+        The smallest loaded context length, or None.
+    """
+    root = base_url[: -len("/v1")] if base_url.endswith("/v1") else base_url
+    try:
+        with _urlopen(urllib.request.Request(f"{root}/api/v1/models"), timeout=10) as resp:
+            data = json.loads(resp.read())
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    for entry in data.get("models", []):
+        if entry.get("key") != model:
+            continue
+        lengths = [
+            inst.get("config", {}).get("context_length")
+            for inst in entry.get("loaded_instances", [])
+        ]
+        ints = [n for n in lengths if isinstance(n, int)]
+        return min(ints) if ints else None
+    return None
+
+
+def call_lmstudio(prompt: str, model: str | None, system: str | None, max_tokens: int) -> str:
+    """Call LM Studio's OpenAI-compatible chat endpoint and return the answer text.
+
+    The request carries a per-request ``ttl`` so the model unloads after it has been idle that long.
+    That only applies to models LM Studio JIT-loads: one loaded by hand never unloads, and the context
+    length cannot be set per request, so it is checked instead (before and after the call).
+
+    Args:
+        prompt: User message to send.
+        model: LM Studio model key (see ``lms ls``); required.
+        system: Optional system prompt text.
+        max_tokens: Maximum answer tokens (a thinking allowance is added automatically).
+
+    Returns:
+        The assistant's answer text.
+    """
+    if not model:
+        raise RuntimeError(
+            "LM Studio: no model configured. Set this role's model key in config/models.json "
+            "(list installed models with: lms ls)."
+        )
+    base = _lmstudio_base_url()
+    ttl = int(os.environ.get("LMSTUDIO_TTL", LMSTUDIO_DEFAULT_TTL_SECONDS))
+    budget = max_tokens + LMSTUDIO_THINKING_OVERHEAD
+    full_text = (system or "") + prompt
+
+    loaded_ctx = _lmstudio_loaded_context(base, model)
+    if loaded_ctx is not None:
+        # len/6 is a floor on the token count (very sparse text), so tripping it means the input cannot fit.
+        if len(full_text) // 6 >= loaded_ctx - 256:
+            raise RuntimeError(
+                f"LM Studio: the input (about {len(full_text) // 4} tokens) cannot fit the loaded context window "
+                f"of {loaded_ctx} tokens. Raise this model's context length in LM Studio's model settings "
+                "(loading it by hand with `lms load` disables the idle unload)."
+            )
+        if len(full_text) // 3 + budget > loaded_ctx:
+            print(
+                f"[lmstudio] warning: input plus output budget may exceed the {loaded_ctx}-token context; "
+                "the answer could be cut off.",
+                file=sys.stderr,
+            )
+
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    body: dict[str, object] = {"model": model, "messages": messages, "max_tokens": budget, "ttl": ttl}
+    temperature = os.environ.get("LMSTUDIO_TEMPERATURE")
+    if temperature:
+        body["temperature"] = float(temperature)
+    req = urllib.request.Request(
+        f"{base}/chat/completions",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    timeout = int(os.environ.get("LMSTUDIO_TIMEOUT", LMSTUDIO_TIMEOUT_SECONDS))
+    _retries: list[int] = []
+    t0 = time.monotonic()
+    try:
+        with _urlopen(req, timeout=timeout, _retries=_retries) as resp:
+            result = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace")[:500]
+        hint = (
+            f" Model '{model}' is not available: list installed models with `lms ls`, download one with `lms get`."
+            if e.code == 404 or "not found" in detail.lower()
+            else ""
+        )
+        raise RuntimeError(f"LM Studio HTTP {e.code} at {base}: {detail}{hint}") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(
+            f"LM Studio not reachable at {base} ({e.reason}). "
+            "Start the server: lms server start (or open the LM Studio app)."
+        ) from e
+    except TimeoutError as e:
+        raise RuntimeError(
+            f"LM Studio did not answer within {timeout}s. Use a smaller input or model, or raise LMSTUDIO_TIMEOUT "
+            "(and the Bash tool timeout)."
+        ) from e
+    elapsed = time.monotonic() - t0
+
+    choices = result.get("choices") or []
+    if not choices:
+        raise RuntimeError(f"LM Studio returned no choices (full response: {result})")
+    choice = choices[0]
+    message = choice.get("message") or {}
+    content = (message.get("content") or "").strip()
+    reasoning = (message.get("reasoning_content") or "").strip()
+    finish = choice.get("finish_reason", "unknown")
+    usage = result.get("usage") or {}
+    tok_in = usage.get("prompt_tokens", "?")
+    tok_out = usage.get("completion_tokens", "?")
+
+    if isinstance(tok_in, int):
+        ctx = loaded_ctx if loaded_ctx is not None else _lmstudio_loaded_context(base, model)
+        if ctx is not None and tok_in >= ctx - 64:
+            raise RuntimeError(
+                f"LM Studio counted {tok_in} prompt tokens against a {ctx}-token context window: the input was "
+                "truncated, so the review would cover a partial prompt. Raise this model's context length in "
+                "LM Studio's model settings (loading it by hand with `lms load` disables the idle unload)."
+            )
+        expected = _estimate_tokens(full_text)
+        if expected > 2000 and tok_in < expected * 0.6:
+            print(
+                f"[lmstudio] possible truncation: the server counted {tok_in} prompt tokens "
+                f"but the input is about {expected}.",
+                file=sys.stderr,
+            )
+
+    if not content:
+        if reasoning:
+            raise RuntimeError(
+                f"LM Studio returned only reasoning, no answer (finish_reason={finish}). The token budget ran out "
+                "while thinking: raise --max-tokens, or use a model or setting with thinking off."
+            )
+        raise RuntimeError(f"LM Studio returned no content (finish_reason={finish}; response: {result})")
+    if finish == "length":
+        print(
+            "[lmstudio] finish_reason=length: the answer was cut off; raise --max-tokens for the full text.",
+            file=sys.stderr,
+        )
+
+    tok_per_s: float | str = tok_out / elapsed if isinstance(tok_out, int) and elapsed > 0 else "?"
+    _emit_stats("lmstudio", model, tok_in, tok_out, elapsed, tok_per_s, retries=_retries[0] if _retries else 0)
     return content
 
 
@@ -509,7 +751,7 @@ def resolve_config_role(config_path: str, role_path: str) -> tuple[str, str | No
 def main() -> None:
     """Parse arguments, read prompt from stdin, dispatch to the selected provider."""
     parser = argparse.ArgumentParser(description="Call an external LLM provider")
-    parser.add_argument("--provider", help="Provider: gemini | xai | openai | groq | ollama | codex")
+    parser.add_argument("--provider", help="Provider: gemini | xai | openai | groq | ollama | lmstudio | codex")
     parser.add_argument("--model", default=None, help="Model identifier (overrides config)")
     parser.add_argument("--system", default=None, help="System prompt")
     parser.add_argument("--max-tokens", type=int, default=8192)
@@ -567,6 +809,8 @@ def main() -> None:
             response = call_groq(prompt, model, args.system, args.max_tokens)
         elif provider == "ollama":
             response = call_ollama(prompt, model, args.system, args.max_tokens)
+        elif provider == "lmstudio":
+            response = call_lmstudio(prompt, model, args.system, args.max_tokens)
         elif provider == "codex":
             response = call_codex(prompt, model, args.system, args.max_tokens)
         elif provider == "claude":

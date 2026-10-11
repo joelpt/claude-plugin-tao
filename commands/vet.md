@@ -14,8 +14,8 @@ The old command names (`/tao:challenge`, `/tao:skeptic`, `/tao:consensus`) no lo
 | Depth | Voices | Agent(s) | Formerly |
 |---|---|---|---|
 | quick | 1 — Claude only | `tao:proposal-vetting-judge` (opus) | `/tao:vet` |
-| standard | 3 — Claude + Grok + Ollama | `tao:senior-skeptic-reviewer` (opus) + Grok 4.3 + Ollama | `/tao:challenge`, `/tao:skeptic` |
-| full | 4 — Claude advocate + Grok critic + Codex/GPT analyst + Ollama, synthesized | `tao:consensus-advocate` + external voices + `tao:consensus-synthesizer` | `/tao:consensus` |
+| standard | 3 — Claude + Grok + local model | `tao:senior-skeptic-reviewer` (opus) + Grok 4.3 + local model (LM Studio or Ollama) | `/tao:challenge`, `/tao:skeptic` |
+| full | 4 — Claude advocate + Grok critic + Codex/GPT analyst + local model, synthesized | `tao:consensus-advocate` + external voices + `tao:consensus-synthesizer` | `/tao:consensus` |
 
 ## Argument handling
 
