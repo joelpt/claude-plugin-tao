@@ -131,8 +131,36 @@ class CallLmStudio(unittest.TestCase):
         self.assertEqual(body["model"], "m1")
         self.assertEqual(body["ttl"], 600)
         self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
-        self.assertGreater(body["max_tokens"], 1000)  # thinking allowance added on top
         self.assertIn("[tao-stats] provider=lmstudio model=m1", err)
+
+    def test_thinking_is_off_by_default_and_gets_no_allowance(self) -> None:
+        net = _FakeNet({"/api/v1/models": _models(None), "/chat/completions": _chat_ok()})
+        self._call(net)
+        body = net.posts()[0][1]
+        self.assertEqual(body["reasoning_effort"], "none")
+        self.assertEqual(body["max_tokens"], 1000)
+
+    def test_reasoning_effort_override_adds_a_thinking_allowance(self) -> None:
+        net = _FakeNet({"/api/v1/models": _models(None), "/chat/completions": _chat_ok()})
+        self._call(net, env={"LMSTUDIO_REASONING_EFFORT": "medium"})
+        body = net.posts()[0][1]
+        self.assertEqual(body["reasoning_effort"], "medium")
+        self.assertGreater(body["max_tokens"], 1000)
+
+    def test_reasoning_effort_default_omits_the_parameter(self) -> None:
+        net = _FakeNet({"/api/v1/models": _models(None), "/chat/completions": _chat_ok()})
+        self._call(net, env={"LMSTUDIO_REASONING_EFFORT": "default"})
+        body = net.posts()[0][1]
+        self.assertNotIn("reasoning_effort", body)
+        self.assertGreater(body["max_tokens"], 1000)
+
+    def test_rejected_reasoning_parameter_names_the_override(self) -> None:
+        url = f"{BASE}/chat/completions"
+        err_body = '{"error":{"message":"Unrecognized key reasoning_effort"}}'
+        net = _FakeNet({"/api/v1/models": _models(None), "/chat/completions": _http_error(url, 400, err_body)})
+        _, _, exc = self._call(net)
+        self.assertIsInstance(exc, RuntimeError)
+        self.assertIn("LMSTUDIO_REASONING_EFFORT=default", str(exc))
 
     def test_ttl_overridable_by_env(self) -> None:
         net = _FakeNet({"/api/v1/models": _models(None), "/chat/completions": _chat_ok()})

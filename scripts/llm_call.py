@@ -21,7 +21,8 @@ API keys (from ~/.zshenv — never hardcoded):
   (Ollama needs no key — local endpoint at localhost:11434)
   (LM Studio needs no key — OpenAI-compatible endpoint; URL from LMSTUDIO_BASE_URL, else the port in
    ~/.lmstudio/.internal/http-server-config.json, else 1234. A model is required: `lms ls` lists keys.
-   LMSTUDIO_TTL (default 600 s idle unload), LMSTUDIO_TIMEOUT, LMSTUDIO_TEMPERATURE are optional.)
+   LMSTUDIO_TTL (default 600 s idle unload), LMSTUDIO_TIMEOUT, LMSTUDIO_TEMPERATURE and
+   LMSTUDIO_REASONING_EFFORT (default none = thinking off; none|minimal|low|medium|high|default) are optional.)
 """
 
 import argparse
@@ -464,8 +465,12 @@ def call_ollama(prompt: str, model: str | None, system: str | None, max_tokens: 
 
 #: Idle seconds before LM Studio unloads a model that this provider JIT-loaded (override: LMSTUDIO_TTL).
 LMSTUDIO_DEFAULT_TTL_SECONDS = 600
-#: Extra output tokens granted so a thinking model's reasoning cannot crowd out the answer.
+#: Extra output tokens granted so a thinking model's reasoning cannot crowd out the answer (only when thinking is on).
 LMSTUDIO_THINKING_OVERHEAD = 8192
+#: Thinking is off by default: measured on an M1 Max, a 27B dense model generates ~9 tokens/s, so unbounded
+#: reasoning on a plan-sized prompt overran a 570 s timeout. Override: LMSTUDIO_REASONING_EFFORT
+#: (none | minimal | low | medium | high | default, where default omits the parameter).
+LMSTUDIO_DEFAULT_REASONING_EFFORT = "none"
 #: Socket read timeout; stays under the 600 s Bash-tool timeout the vet references set (override: LMSTUDIO_TIMEOUT).
 LMSTUDIO_TIMEOUT_SECONDS = 570
 _LMSTUDIO_SERVER_CONFIG = Path.home() / ".lmstudio" / ".internal" / "http-server-config.json"
@@ -545,7 +550,9 @@ def call_lmstudio(prompt: str, model: str | None, system: str | None, max_tokens
         )
     base = _lmstudio_base_url()
     ttl = int(os.environ.get("LMSTUDIO_TTL", LMSTUDIO_DEFAULT_TTL_SECONDS))
-    budget = max_tokens + LMSTUDIO_THINKING_OVERHEAD
+    effort = os.environ.get("LMSTUDIO_REASONING_EFFORT", LMSTUDIO_DEFAULT_REASONING_EFFORT)
+    # Thinking tokens come out of the same max_tokens budget, so allow for them unless thinking is off.
+    budget = max_tokens if effort == "none" else max_tokens + LMSTUDIO_THINKING_OVERHEAD
     full_text = (system or "") + prompt
 
     loaded_ctx = _lmstudio_loaded_context(base, model)
@@ -569,6 +576,8 @@ def call_lmstudio(prompt: str, model: str | None, system: str | None, max_tokens
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
     body: dict[str, object] = {"model": model, "messages": messages, "max_tokens": budget, "ttl": ttl}
+    if effort != "default":
+        body["reasoning_effort"] = effort
     temperature = os.environ.get("LMSTUDIO_TEMPERATURE")
     if temperature:
         body["temperature"] = float(temperature)
@@ -585,11 +594,12 @@ def call_lmstudio(prompt: str, model: str | None, system: str | None, max_tokens
             result = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:500]
-        hint = (
-            f" Model '{model}' is not available: list installed models with `lms ls`, download one with `lms get`."
-            if e.code == 404 or "not found" in detail.lower()
-            else ""
-        )
+        if e.code == 404 or "not found" in detail.lower():
+            hint = f" Model '{model}' is not available: list installed models with `lms ls`, download one with `lms get`."
+        elif "reasoning" in detail.lower():
+            hint = " This model may not accept reasoning_effort: set LMSTUDIO_REASONING_EFFORT=default to omit it."
+        else:
+            hint = ""
         raise RuntimeError(f"LM Studio HTTP {e.code} at {base}: {detail}{hint}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(

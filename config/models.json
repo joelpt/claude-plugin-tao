@@ -8,7 +8,7 @@
     "groq": "GROQ_API_KEY in ~/.zshenv — Groq LPU inference, very fast. Per-token cost. Default model: meta-llama/llama-4-scout-17b-16e-instruct.",
     "codex": "Codex CLI companion — OpenAI subscription quota, no per-token cost. Requires codex plugin.",
     "ollama": "Local inference, no cloud cost. ollama pull qwen3:32b && ollama serve. A role with model null gets _default_local_model.",
-    "lmstudio": "Local inference through LM Studio's OpenAI-compatible server, no cloud cost. Set an explicit model key (lms ls; download with lms get). The model JIT-loads on first use and unloads after 10 idle minutes (LMSTUDIO_TTL overrides); the context length is an LM Studio model setting. No _default_local_model fallback.",
+    "lmstudio": "Local inference through LM Studio's OpenAI-compatible server, no cloud cost. Set an explicit model key (lms ls; download with lms get). The model JIT-loads on first use and unloads after 10 idle minutes (LMSTUDIO_TTL overrides); the context length is an LM Studio model setting (give the model at least 49152). Thinking is off by default (LMSTUDIO_REASONING_EFFORT overrides). No _default_local_model fallback.",
     "gemini": "GEMINI_API_KEY in ~/.zshenv — Google direct. Per-token cost."
   },
   "vet": {
@@ -19,13 +19,13 @@
     "standard": {
       "primary":    {"provider": "claude", "model": "opus"},
       "challenger": {"provider": "xai",    "model": "grok-4.3"},
-      "local":      {"provider": "ollama", "model": null}
+      "local":      {"provider": "lmstudio", "model": "qwen/qwen3.8-27b"}
     },
     "full": {
       "advocate": {"provider": "claude",  "model": "opus"},
       "critic":   {"provider": "xai",    "model": "grok-4.3"},
       "analyst":  {"provider": "codex",  "model": null},
-      "local":    {"provider": "ollama", "model": null}
+      "local":    {"provider": "lmstudio", "model": "qwen/qwen3.8-27b"}
     }
   }
 }

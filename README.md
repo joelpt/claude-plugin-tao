@@ -67,11 +67,15 @@ ollama pull qwen3:32b && ollama serve
 
 # Local voice, option 2: LM Studio (JIT-loads the model, unloads it after 10 idle minutes)
 lms ls                                   # installed model keys
-lms get <model>                          # download one, then set it as the model of the vet.*.local roles
+lms get qwen/qwen3.8-27b                 # shipped default for the vet.*.local roles (16 GB, MLX 4-bit)
 lms server start                         # or open the LM Studio app
 # Optional: LMSTUDIO_BASE_URL (default: the port in LM Studio's server config, else 1234),
-#           LMSTUDIO_TTL=600 (idle seconds before unload), LMSTUDIO_TIMEOUT=570
-# Set the model's context length in LM Studio's model settings (a plan-sized prompt needs 32768 or more);
+#           LMSTUDIO_TTL=600 (idle seconds before unload), LMSTUDIO_TIMEOUT=570,
+#           LMSTUDIO_REASONING_EFFORT=none (thinking off; none|minimal|low|medium|high|default)
+# Thinking is off by default: a 27B dense model generates ~9 tokens/s on an M1 Max, so unbounded reasoning
+# on a plan-sized prompt overran a 10-minute call. Only "none" was verified to disable it.
+# Set the model's context length in LM Studio's model settings (a plan-sized prompt needs 49152 or more;
+# the per-model file is ~/.lmstudio/.internal/user-concrete-model-default-config/<catalog-key>.json);
 # loading a model by hand with `lms load` disables the idle unload. LM Studio and tao share one resident
 # model, so a tao call can evict a model you are chatting with, and the reverse.
 
