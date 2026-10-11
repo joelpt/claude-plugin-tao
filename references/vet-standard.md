@@ -1,6 +1,6 @@
-# Vet — Standard depth (3 voices — Claude + Grok + a local model)
+# Vet — Standard depth (2 voices — Claude + Grok)
 
-Dispatch all three in ONE message (parallel tool calls).
+Dispatch both in ONE message (parallel tool calls).
 
 **Passing the input to a Bash voice.** Give the text to `llm_call.py` through a *quoted heredoc* whose delimiter is a fresh random token you invent for each call (for example `TAO_7QK2M9_EOF`), never a fixed literal. A double-quoted shell string would execute backticks and `$(...)` inside the vetted text, and a fixed delimiter can collide with a line of the input. Replace `<input>` with the text itself, verbatim.
 
@@ -14,7 +14,7 @@ Agent(
 )
 ```
 
-**Voice 2 — Grok Challenger** (Bash tool — self-contained; this is a separate tool call from Voice 1/3, so it resolves its own paths rather than relying on any earlier `Bash` call's shell state):
+**Voice 2 — Grok Challenger** (Bash tool — self-contained, so it resolves its own paths rather than relying on any earlier `Bash` call's shell state):
 
 ```bash
 PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
@@ -28,27 +28,13 @@ python3 "$SCRIPTS/llm_call.py" \
 TAO_RANDOM_EOF
 ```
 
-**Voice 3 — Local model** (Bash tool — self-contained, same reason). Set the Bash tool's `timeout` to `600000` (10 minutes): a local 27-31B model can take minutes on a plan-sized prompt, and the default 120 s would kill the call.
-
-```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
-SCRIPTS="$PLUGIN_ROOT/scripts"
-CONFIG="$PLUGIN_ROOT/config/models.json"
-python3 "$SCRIPTS/llm_call.py" \
-  --config "$CONFIG" --role=vet.standard.local \
-  --system="You are a senior skeptic. What are the biggest risks and wrong assumptions? What would you reject? Be direct." \
-  --max-tokens=<8192 standard | 16384 high-effort> <<'TAO_RANDOM_EOF'
-<input>
-TAO_RANDOM_EOF
-```
-
 ## Handle results
 
-For any Bash call that exits non-zero: substitute `[Voice unavailable — <the ERROR line the script printed>. Edit config/models.json to change provider.]`. The local voice's error line names the exact fix (for example `lms get`, `lms server start`, or raising the context length), so quote it rather than guessing a cause.
+For any Bash call that exits non-zero: substitute `[Voice unavailable — <the ERROR line the script printed>. Edit config/models.json to change provider.]`. Quote the error line rather than guessing a cause.
 
 ## Present results
 
-Show all three responses as human-readable text with clear attribution, then a mechanical merge — no editorial layer, no recommendation unless the user asks for one.
+Show both responses as human-readable text with clear attribution, then a mechanical merge — no editorial layer, no recommendation unless the user asks for one.
 
 ```text
 ## Claude Opus
@@ -57,22 +43,19 @@ Show all three responses as human-readable text with clear attribution, then a m
 ## Grok 4.3
 <grok response verbatim, or "[Grok unavailable: check XAI_API_KEY in ~/.zshenv]">
 
-## Local [provider/model]
-<local response verbatim, or "[Local voice unavailable: <the error line>]">
-
-## Points raised by multiple models
-<deduplicated list — note which models raised each point, e.g. "(Claude, Grok)">
+## Points raised by both models
+<deduplicated list of points both raised>
 
 ## Points raised by only one model
 <list with attribution — potential unique insights or model-specific blind spots>
 
 ## Explicit disagreements
-<only where models took directly opposing positions — quote both sides>
+<only where the models took directly opposing positions — quote both sides>
 ```
 
 ## Run stats
 
-Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`). Use `—` for the Claude voice. Take the Local row's provider and model from its stats line.
+Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`). Use `—` for the Claude voice.
 
 ```text
 ## Run stats
@@ -80,7 +63,6 @@ Extract `[tao-stats]` lines from Bash stderr (lines starting with `[tao-stats]`)
 |---------|----------|--------------|-----------|------------|--------|-------|
 | Claude  | claude   | opus         | —         | —          | —      | —     |
 | Grok    | xai      | <model>      | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
-| Local   | <provider> | <model>    | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
 ```
 
 If a voice was unavailable, omit its row or mark all cells `unavailable`.

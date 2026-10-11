@@ -1,6 +1,6 @@
 ---
 name: vet
-description: "Vet a proposal, 1-4 voices, depth auto-picked"
+description: "Vet a proposal, 1-3 voices, depth auto-picked"
 ---
 
 # Tao — Vet
@@ -14,13 +14,13 @@ The old command names (`/tao:challenge`, `/tao:skeptic`, `/tao:consensus`) no lo
 | Depth | Voices | Agent(s) | Formerly |
 |---|---|---|---|
 | quick | 1 — Claude only | `tao:proposal-vetting-judge` (opus) | `/tao:vet` |
-| standard | 3 — Claude + Grok + local model | `tao:senior-skeptic-reviewer` (opus) + Grok 4.3 + local model (LM Studio or Ollama) | `/tao:challenge`, `/tao:skeptic` |
-| full | 4 — Claude advocate + Grok critic + Codex/GPT analyst + local model, synthesized | `tao:consensus-advocate` + external voices + `tao:consensus-synthesizer` | `/tao:consensus` |
+| standard | 2 — Claude + Grok | `tao:senior-skeptic-reviewer` (opus) + Grok 4.3 | `/tao:challenge`, `/tao:skeptic` |
+| full | 3 — Claude advocate + Grok critic + Codex/GPT analyst, synthesized | `tao:consensus-advocate` + external voices + `tao:consensus-synthesizer` | `/tao:consensus` |
 
 ## Argument handling
 
 - Primary argument: proposal, statement, or decision to vet — everything in `$ARGUMENTS` after stripping flags
-- `--depth=quick|standard|full` (or `--voices=1|3|4`): force a depth level, skipping Step 0
+- `--depth=quick|standard|full` (or `--voices=1|2|3`): force a depth level, skipping Step 0
 - `--files=<paths>`: relevant files for context
 - `--focus-areas=<areas>`: constrain vetting to specific concerns
 - `--high-effort` / `--thinking`: 16384 max_tokens for external calls; add ultrathink instruction to Claude agent(s)

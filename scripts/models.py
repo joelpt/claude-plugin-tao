@@ -35,9 +35,6 @@ def print_table(config: dict[str, object]) -> None:
     Args:
         config: Parsed models.json dict.
     """
-    default_local = config.get("_default_local_model", "(not set)")
-    print(f"Default local model: {default_local}\n")
-
     header = f"{'Mode':<12} {'Role':<12} {'Provider':<10} {'Model':<20}"
     print(header)
     print("-" * len(header))
@@ -51,9 +48,7 @@ def print_table(config: dict[str, object]) -> None:
             if not isinstance(entry, dict):
                 continue
             provider = entry.get("provider", "?")
-            model = entry.get("model") or (
-                default_local if provider == "ollama" else "default"
-            )
+            model = entry.get("model") or "default"
             print(f"{section:<12} {role:<12} {provider:<10} {model:<20}")
 
 

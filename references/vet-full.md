@@ -1,6 +1,6 @@
-# Vet — Full depth (4 voices — Claude advocate + Grok critic + Codex/GPT analyst + a local model, synthesized)
+# Vet — Full depth (3 voices — Claude advocate + Grok critic + Codex/GPT analyst, synthesized)
 
-Dispatch all four in ONE message (parallel tool calls).
+Dispatch all three in ONE message (parallel tool calls).
 
 **Passing the input to a Bash voice.** Give the text to `llm_call.py` through a *quoted heredoc* whose delimiter is a fresh random token you invent for each call (for example `TAO_7QK2M9_EOF`), never a fixed literal. A double-quoted shell string would execute backticks and `$(...)` inside the vetted text, and a fixed delimiter can collide with a line of the input. Replace `<input>` with the text itself, verbatim.
 
@@ -42,27 +42,13 @@ python3 "$SCRIPTS/llm_call.py" \
 TAO_RANDOM_EOF
 ```
 
-**Voice 4 — Local model** (Bash tool — self-contained, same reason). Set the Bash tool's `timeout` to `600000` (10 minutes): a local 27-31B model can take minutes on a plan-sized prompt, and the default 120 s would kill the call.
-
-```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"
-SCRIPTS="$PLUGIN_ROOT/scripts"
-CONFIG="$PLUGIN_ROOT/config/models.json"
-python3 "$SCRIPTS/llm_call.py" \
-  --config "$CONFIG" --role=vet.full.local \
-  --system="Provide your independent perspective on this decision. Focus on practical implementation realities." \
-  --max-tokens=<8192 standard | 16384 high-effort> <<'TAO_RANDOM_EOF'
-<input>
-TAO_RANDOM_EOF
-```
-
 Then synthesize:
 
 ```text
 Agent(
   subagent_type="tao:consensus-synthesizer",
   model="opus",
-  prompt="""Synthesize 4 perspectives on: <input>
+  prompt="""Synthesize 3 perspectives on: <input>
 
 ## Claude Advocate (Claude Opus)
 <advocate_response>
@@ -73,22 +59,19 @@ Agent(
 ## Codex/GPT Analyst
 <codex_response_or_unavailable>
 
-## Local Voice ([provider/model])
-<local_response_or_unavailable>
-
 Note any unavailable voices and how that affects confidence.
 
-Self-contained output (mandatory): the caller sees ONLY your response — never these four raw voices. Open with a 'Positions Considered' section defining each distinct option/stance the voices argued (20–400 words each; err verbose) before any recommendation references it. Never report 'option X is strongest / Y was rejected' without first showing the reader what X and Y are."""
+Self-contained output (mandatory): the caller sees ONLY your response — never these three raw voices. Open with a 'Positions Considered' section defining each distinct option/stance the voices argued (20–400 words each; err verbose) before any recommendation references it. Never report 'option X is strongest / Y was rejected' without first showing the reader what X and Y are."""
 )
 ```
 
 ## Handle results
 
-For any Bash call that exits non-zero: substitute `[Voice unavailable — <the ERROR line the script printed>. Edit config/models.json to change provider.]`. The local voice's error line names the exact fix (for example `lms get`, `lms server start`, or raising the context length), so quote it rather than guessing a cause.
+For any Bash call that exits non-zero: substitute `[Voice unavailable — <the ERROR line the script printed>. Edit config/models.json to change provider.]`. Quote the error line rather than guessing a cause.
 
 ## Run stats
 
-Append after the synthesizer returns. `—` for Claude voices (no token telemetry available from Agent calls). Take the Local row's provider and model from its `[tao-stats]` line.
+Append after the synthesizer returns. `—` for Claude voices (no token telemetry available from Agent calls).
 
 ```text
 ## Run stats
@@ -97,7 +80,6 @@ Append after the synthesizer returns. `—` for Claude voices (no token telemetr
 | Claude Opus   | claude   | opus          | —         | —          | —      | —     |
 | Grok Critic   | xai      | <model>       | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
 | Codex Analyst | codex    | <model>       | ?         | ?          | <Xs>   | n/a   |
-| Local         | <provider> | <model>     | <tok_in>  | <tok_out>  | <Xs>   | <N>   |
 ```
 
 Omit rows for unavailable voices or mark all cells `unavailable`.

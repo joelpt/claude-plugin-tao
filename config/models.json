@@ -1,31 +1,26 @@
 {
-  "_comment": "Tao model configuration. Edit to swap providers/models for each role. Examples: swap vet.full.local to {provider:groq,model:meta-llama/llama-4-scout-17b-16e-instruct} for fast cloud inference without Ollama; swap vet.full.analyst to {provider:openai,model:gpt-5} for direct GPT instead of Codex CLI.",
-  "_default_local_model": "qwen3:32b",
+  "_comment": "Tao model configuration. Edit to swap providers/models for each role. Examples: swap vet.full.analyst to {provider:openai,model:gpt-5} for direct GPT instead of Codex CLI; swap vet.standard.challenger to {provider:groq,model:meta-llama/llama-4-scout-17b-16e-instruct} for a fast, cheap cloud challenger.",
   "_providers": {
     "claude": "Claude Max subscription — free. No key needed.",
     "xai": "XAI_API_KEY in ~/.zshenv — api.x.ai direct.",
     "openai": "OPENAI_API_KEY in ~/.zshenv — OpenAI direct. Per-token cost. Default model: gpt-5.",
     "groq": "GROQ_API_KEY in ~/.zshenv — Groq LPU inference, very fast. Per-token cost. Default model: meta-llama/llama-4-scout-17b-16e-instruct.",
     "codex": "Codex CLI companion — OpenAI subscription quota, no per-token cost. Requires codex plugin.",
-    "ollama": "Local inference, no cloud cost. ollama pull qwen3:32b && ollama serve. A role with model null gets _default_local_model.",
-    "lmstudio": "Local inference through LM Studio's OpenAI-compatible server, no cloud cost. Set an explicit model key (lms ls; download with lms get). The model JIT-loads on first use and unloads after 10 idle minutes (LMSTUDIO_TTL overrides); the context length is an LM Studio model setting (give the model at least 49152). Thinking is off by default (LMSTUDIO_REASONING_EFFORT overrides). No _default_local_model fallback.",
     "gemini": "GEMINI_API_KEY in ~/.zshenv — Google direct. Per-token cost."
   },
   "vet": {
-    "_comment": "Depth tiers for /tao:vet (formerly separate vet/challenge/skeptic/consensus commands). quick=1 voice, standard=3 voices, full=4 voices. NOTE: entries with provider 'claude' are documentation only — Claude voices are dispatched directly via the Agent tool with the model hardcoded in each command's .md file, not read from here or through llm_call.py. Only non-claude entries (challenger/critic/analyst/local) are actually consumed, via --role=vet.<depth>.<key>.",
+    "_comment": "Depth tiers for /tao:vet (formerly separate vet/challenge/skeptic/consensus commands). quick=1 voice, standard=2 voices, full=3 voices. NOTE: entries with provider 'claude' are documentation only — Claude voices are dispatched directly via the Agent tool with the model hardcoded in each command's .md file, not read from here or through llm_call.py. Only non-claude entries (challenger/critic/analyst) are actually consumed, via --role=vet.<depth>.<key>.",
     "quick": {
       "primary": {"provider": "claude", "model": "opus"}
     },
     "standard": {
       "primary":    {"provider": "claude", "model": "opus"},
-      "challenger": {"provider": "xai",    "model": "grok-4.3"},
-      "local":      {"provider": "lmstudio", "model": "qwen/qwen3.8-27b"}
+      "challenger": {"provider": "xai",    "model": "grok-4.3"}
     },
     "full": {
       "advocate": {"provider": "claude",  "model": "opus"},
       "critic":   {"provider": "xai",    "model": "grok-4.3"},
-      "analyst":  {"provider": "codex",  "model": null},
-      "local":    {"provider": "lmstudio", "model": "qwen/qwen3.8-27b"}
+      "analyst":  {"provider": "codex",  "model": null}
     }
   }
 }
