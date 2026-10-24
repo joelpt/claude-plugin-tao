@@ -24,11 +24,16 @@ tao is a Claude Code plugin of reasoning workflows. Each mode is a dedicated `/t
 
 ## Roadmap (design intent)
 
-1. **guru-chat live roundtables** — restore peer-to-peer teammate discussion on the current Agent Teams model (named agents plus `SendMessage`, one implicit team per session) and enforce multi-round deliberation. Details and verified findings are in #1.
+1. **guru-chat live roundtables (done, #1)** — peer-to-peer teammate discussion on the current Agent Teams model: named agents plus `SendMessage`, one implicit team per session, and lead-driven rounds (open, rebuttal, final) so a teammate cannot finalize before engaging a peer. A stall detector (`scripts/guru_stall.py`) counts only conforming finals. A small live trial confirmed peers read each other's messages and change positions between rounds.
+2. **guru-chat stats report (done)** — a per-teammate table of tokens, messages sent and received, wall-clock time and a 1-5 contribution score, computed by `scripts/guru_stats.py` from the teammates' own transcripts.
+3. **Two guest luminaries per panel** — #3.
+4. **Domain-adaptive panels for non-code questions** — #4.
 
 Add milestones here, and adopt the milestone/epic/DAG structure from the sync-plan standard, once roughly five or more items are open.
 
 ## Lessons
 
 - Reference-file loading broke silently across vet/think/guru-chat once (fixed in 17574e4); reference paths need a test, not just a read.
+- A multi-agent protocol is only proven by running it. Unit tests of the stall detector passed while the real question, whether teammates read each other before finalizing, was untested until a live trial.
+- Teammate transcripts (`subagents/agent-*.jsonl`, keyed by session id) are the reliable source for per-agent stats. Streaming repeats one message's usage across several rows, so deduplicate by message id.
 - Platform features this plugin leans on (Agent Teams, `TeamCreate`, `team_name`) change between Claude Code releases; verify against the running version before building on them.
