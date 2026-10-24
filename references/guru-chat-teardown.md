@@ -4,7 +4,7 @@ Do NOT terminate the teammates when you present the synthesis. Leave them idle s
 
 When the user says 'done' (or otherwise signals they are finished with this roundtable):
 
-1. Confirm the current session's active team is still `<TEAM>` (the unique name from Step 3a) before proceeding — if another `/tao` team-mode command ran in the interim, the active context may have shifted.
-2. `SendMessage` each teammate `message={type: "shutdown_request"}` (object form — no `summary`).
+1. Scope teardown to this roundtable's roster only: the five `<INV>-...` names from Step 3a. Never touch other teammates in the session, including those of another roundtable.
+2. `SendMessage` each roster teammate `message={type: "shutdown_request"}` (object form — no `summary`). A teammate that has already exited is fine; skip it.
 3. `TaskStop` the Monitor if it is still running.
-4. `TeamDelete` once all teammates have shut down.
+4. There is no team to delete: the session's single implicit team is not ours to remove. Teardown is complete once the roster teammates have shut down.

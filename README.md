@@ -36,7 +36,7 @@ Every mode is a dedicated `/tao:<mode> <args>` command — there is no bare `/ta
 | `/tao:tracer` | Sonnet | Execution flow and dependency tracing |
 | `/tao:brainstorm` | Sonnet | Collaborative discussion and brainstorming |
 | `/tao:apilookup` | — | API/library quick-reference research |
-| `/tao:guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer, then synthesized |
+| `/tao:guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer in lead-driven rounds (open, rebuttal, final), then synthesized |
 
 ### Vet mode (variable voices)
 
@@ -91,7 +91,7 @@ commands/                    ← slash command definitions (one per mode)
 agents/                      ← subagent definitions (dispatched by commands)
 references/                  ← dispatch templates read on demand (vet depths, think variants, guru-chat's rare branches) — cuts per-invocation token cost vs. inlining everything
 scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Codex)
-scripts/guru_stall.py        ← guru-chat's team stall detector
+scripts/guru_stall.py        ← guru-chat's roundtable stall detector (roster/round-aware)
 config/models.json           ← model assignments per role (edit to swap providers)
 ```
 
