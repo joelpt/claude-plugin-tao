@@ -92,6 +92,7 @@ agents/                      ← subagent definitions (dispatched by commands)
 references/                  ← dispatch templates read on demand (vet depths, think variants, guru-chat's rare branches) — cuts per-invocation token cost vs. inlining everything
 scripts/llm_call.py          ← multi-provider LLM caller (Grok, OpenAI, Groq, Gemini, Codex)
 scripts/guru_stall.py        ← guru-chat's roundtable stall detector (roster/round-aware)
+scripts/guru_stats.py        ← guru-chat's end-of-roundtable stats table (tokens, messages, wall clock, star rating)
 config/models.json           ← model assignments per role (edit to swap providers)
 ```
 

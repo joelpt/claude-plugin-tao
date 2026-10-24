@@ -140,6 +140,24 @@ The synthesizer's prompt above already mandates self-contained output: its "Pers
 Lead with which guest luminary was chosen and why, then the synthesizer's output verbatim.
 Keep the preamble to factual framing only — guest identity only. Do not mention the path (live vs. fallback) in your preamble; the synthesizer's output already notes the path and confidence implications. Do not draw conclusions or attribute positions in the preamble; all analytical content comes from the synthesizer's output, which defines each guru's stance before referencing it.
 
+### Roundtable stats (live path only)
+
+After the synthesizer's output, append a `## Roundtable stats` section: one row per teammate with tokens, messages sent, messages received, wall-clock time and a 1-5 star contribution score. Skip it on the fallback path, which has no teammates. Run this in ONE self-contained `Bash` call, substituting `<INV>` and `<ROSTER_CSV>` (the five full names, comma-separated) as in 3d:
+
+```bash
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; python3 "$PLUGIN_ROOT/scripts/guru_stats.py" "$CLAUDE_CODE_SESSION_ID" <INV> <ROSTER_CSV>
+```
+
+It reads each teammate's transcript and prints the table with every score `unrated`, followed by a `Cited by peers' FINALs:` line. Rate each teammate yourself, then rerun the same command with `--stars <name>=<1-5>,...` (short names, e.g. `--stars linus=4,guido=5`) and present that table. Rate contribution to the outcome, not agreement with you, length or token spend:
+
+- 5: their argument moved other teammates (peers' `CHANGED:` lines credit it, and several peers cite them).
+- 4: sharp, substantive engagement; forced a concession or conceded for a good reason.
+- 3: solid and sound, but largely what was expected of the role.
+- 2: restated the opening position with little engagement.
+- 1: negligible, or did not report in.
+
+If `CLAUDE_CODE_SESSION_ID` is empty, pass the session id from the transcript path instead. Add one line under the table: tokens are input plus cache plus output (the figure in brackets is output only), and wall clock runs from spawn to the last activity, including time idle between rounds. A teammate with no transcript shows `no transcript found`.
+
 After presenting, if the live path ran, tell the user exactly:
 > "If you're finished with this guru chat, just say 'done' and I'll send the gurus home."
 

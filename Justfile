@@ -9,6 +9,7 @@ test:
     python3 -m py_compile scripts/llm_call.py
     python3 -m py_compile scripts/models.py
     python3 -m py_compile scripts/guru_stall.py
+    python3 -m py_compile scripts/guru_stats.py
     python3 -c "import json; json.load(open('config/models.json'))"
     python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
     python3 -m unittest discover -s tests -v
