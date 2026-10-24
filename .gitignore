@@ -12,3 +12,4 @@ build/
 .lance-rag/
 .claude/
 WIP.md
+.claude/worktrees/
