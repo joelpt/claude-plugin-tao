@@ -26,8 +26,7 @@ tao is a Claude Code plugin of reasoning workflows. Each mode is a dedicated `/t
 
 1. **guru-chat live roundtables (done, #1)** — peer-to-peer teammate discussion on the current Agent Teams model: named agents plus `SendMessage`, one implicit team per session, and lead-driven rounds (open, rebuttal, final) so a teammate cannot finalize before engaging a peer. A stall detector (`scripts/guru_stall.py`) counts only conforming finals. A small live trial confirmed peers read each other's messages and change positions between rounds.
 2. **guru-chat stats report (done)** — a per-teammate table of tokens, messages sent and received, wall-clock time and a 1-5 contribution score, computed by `scripts/guru_stats.py` from the teammates' own transcripts.
-3. **Two guest luminaries per panel** — #3.
-4. **Domain-adaptive panels for non-code questions** — #4.
+3. **Domain-adaptive panels (done, #4; subsumes #3)** — the lead chooses the panel for every question. The four software luminaries plus a domain guest are only a suggested default for software questions; other topics get figures suited to the subject, with lens diversity and at least one dissenter, and `--panel=<names>` forces an exact panel. There is no `auto` mode. Panelists are explicitly simulated lenses grounded in public work, never presented as authentic quotations.
 
 Add milestones here, and adopt the milestone/epic/DAG structure from the sync-plan standard, once roughly five or more items are open.
 

@@ -36,7 +36,7 @@ Every mode is a dedicated `/tao:<mode> <args>` command — there is no bare `/ta
 | `/tao:tracer` | Sonnet | Execution flow and dependency tracing |
 | `/tao:brainstorm` | Sonnet | Collaborative discussion and brainstorming |
 | `/tao:apilookup` | — | API/library quick-reference research |
-| `/tao:guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries (Linus, Guido, Hejlsberg, Carmack + a question-relevant guest) who discuss peer-to-peer in lead-driven rounds (open, rebuttal, final), then synthesized |
+| `/tao:guru-chat` | Sonnet ×5 + Sonnet | Live roundtable of luminaries chosen per question (software questions default to Linus, Guido, Hejlsberg, Carmack + a domain guest; other topics get figures suited to the subject; `--panel=<names>` overrides) who discuss peer-to-peer in lead-driven rounds (open, rebuttal, final), then synthesized |
 
 ### Vet mode (variable voices)
 
