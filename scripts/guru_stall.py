@@ -2,7 +2,7 @@
 """Stall detector for tao guru-chat's live roundtable.
 
 Polls the lead's inbox for FINAL POSITION report-outs and idle notifications, emitting
-PROGRESS/STALL/PREMATURE/ALL_REPORTED lines for a Monitor to watch. Every protocol message
+PROGRESS/STALL/PREMATURE/INBOX_MISSING/INBOX_INVALID/ALL_REPORTED lines for a Monitor to watch. Every protocol message
 carries an invocation-scoped header, `[RT:<invocation>|<TYPE>|r<round>]`, and only messages
 from the invocation's own roster are considered, so a second roundtable in the same session
 or an unrelated teammate cannot be miscounted. A FINAL is accepted only when its round is at
@@ -18,13 +18,15 @@ import json
 import re
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 HEADER = re.compile(r"\[RT:(?P<inv>[^|\]]+)\|(?P<type>[A-Z]+)\|r(?P<round>\d+)\]")
-ENGAGED = re.compile(r"^PEERS ENGAGED:[ \t]*(?P<names>.*)$", re.MULTILINE)
-CHANGED = re.compile(r"^CHANGED:[ \t]*\S", re.MULTILINE)
+_LABEL_PREFIX = r"^[ \t>*_\-\u2022#]*"
+ENGAGED = re.compile(_LABEL_PREFIX + r"PEERS ENGAGED[*_ \t]*:[*_ \t]*(?P<names>.*)$", re.MULTILINE)
+CHANGED = re.compile(_LABEL_PREFIX + r"CHANGED[*_ \t]*:[*_ \t]*\S", re.MULTILINE)
 POLL_SECONDS = 15
 STALL_SECONDS = 90
 
@@ -48,71 +50,116 @@ def _short(name: str, invocation: str) -> str:
     return name[len(prefix):] if name.startswith(prefix) else name
 
 
+def _token(raw: str) -> str:
+    return re.sub(r"[^a-z0-9-]", "", raw.strip().lstrip("@").lower())
+
+
 def _engages_peer(text: str, sender: str, invocation: str, roster: list[str]) -> bool:
     match = ENGAGED.search(text)
     if not match:
         return False
-    named = {t.strip().lower() for t in re.split(r"[,;\s]+", match.group("names")) if t.strip()}
+    named = {_token(t) for t in re.split(r"[,;\s]+", match.group("names"))} - {""}
     for peer in roster:
         if peer == sender:
             continue
-        if peer.lower() in named or _short(peer, invocation).lower() in named:
+        if _token(peer) in named or _token(_short(peer, invocation)) in named:
             return True
     return False
 
 
-def classify(messages: list[dict[str, Any]], invocation: str, roster: list[str], min_round: int) -> Report:
+def _is_idle(text: str) -> bool:
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        return "idle_notification" in text
+    return isinstance(parsed, dict) and parsed.get("type") == "idle_notification"
+
+
+def classify(messages: list[Any], invocation: str, roster: list[str], min_round: int) -> Report:
     """Classify inbox messages for one roundtable invocation.
 
-    Only roster senders and messages headed with this invocation id count. A sender is
-    `accepted` once any of its FINAL messages meets the round and engagement rules; a sender
-    with only non-conforming FINALs is `premature`.
+    Only roster senders and messages headed with this invocation id count as reports. A sender
+    is `accepted` once any of its FINAL messages meets the round and engagement rules; a sender
+    with only non-conforming FINALs is `premature`. `idle_unreported` lists non-accepted senders
+    whose latest message is an idle notification or a non-conforming FINAL, i.e. who are stuck.
     """
     members = set(roster)
     accepted: set[str] = set()
     flagged: set[str] = set()
-    reported_or_flagged: set[str] = set()
-    idle: set[str] = set()
+    last_kind: dict[str, str] = {}
     for msg in messages:
+        if not isinstance(msg, dict):
+            continue
         sender = msg.get("from", "")
         if sender not in members:
             continue
         text = msg.get("text", "")
-        if "idle_notification" in text:
-            idle.add(sender)
+        if not isinstance(text, str):
             continue
         header = HEADER.search(text)
-        if not header or header["inv"] != invocation or header["type"] != "FINAL":
+        if header is None:
+            if _is_idle(text):
+                last_kind[sender] = "idle"
             continue
-        reported_or_flagged.add(sender)
+        if header["inv"] != invocation:
+            continue
+        if header["type"] != "FINAL":
+            last_kind[sender] = "other"
+            continue
         ok = (
             int(header["round"]) >= min_round
             and _engages_peer(text, sender, invocation, roster)
             and CHANGED.search(text) is not None
         )
-        (accepted if ok else flagged).add(sender)
+        if ok:
+            accepted.add(sender)
+        else:
+            flagged.add(sender)
+        last_kind[sender] = "ok" if ok else "bad"
+    stuck = {s for s, k in last_kind.items() if k in ("idle", "bad")} - accepted
     return Report(
         accepted=sorted(accepted),
         premature=sorted(flagged - accepted),
-        idle_unreported=sorted(idle - reported_or_flagged),
+        idle_unreported=sorted(stuck),
     )
 
 
-def poll(inbox: Path, invocation: str, roster: list[str], min_round: int) -> None:
+def poll(
+    inbox: Path,
+    invocation: str,
+    roster: list[str],
+    min_round: int,
+    sleep: Callable[[float], None] = time.sleep,
+    max_polls: int | None = None,
+) -> None:
     """Poll until every roster member has an accepted FINAL, printing events for a Monitor."""
     n = len(roster)
     prev: tuple[int, int] = (-1, -1)
     quiet = 0
-    while True:
-        messages: list[dict[str, Any]] = []
-        if inbox.exists():
+    warned: set[str] = set()
+    polls = 0
+    while max_polls is None or polls < max_polls:
+        polls += 1
+        messages: list[Any] = []
+        if not inbox.exists():
+            if "missing" not in warned:
+                print(f"INBOX_MISSING {inbox}", flush=True)
+                warned.add("missing")
+        else:
+            warned.discard("missing")
             try:
-                messages = json.loads(inbox.read_text())
+                loaded = json.loads(inbox.read_text())
             except (OSError, json.JSONDecodeError):
                 # A concurrent write can leave the file mid-write; skip this poll rather
                 # than treating it as an empty inbox, which would regress the counts.
-                time.sleep(POLL_SECONDS)
+                sleep(POLL_SECONDS)
                 continue
+            if isinstance(loaded, list):
+                messages = loaded
+                warned.discard("invalid")
+            elif "invalid" not in warned:
+                print(f"INBOX_INVALID {inbox} is not a JSON list", flush=True)
+                warned.add("invalid")
         report = classify(messages, invocation, roster, min_round)
         state = (len(report.accepted), len(report.premature))
         if state != prev:
@@ -125,14 +172,14 @@ def poll(inbox: Path, invocation: str, roster: list[str], min_round: int) -> Non
             quiet += POLL_SECONDS
         if state[0] >= n:
             print(f"ALL_REPORTED [{','.join(report.accepted)}]", flush=True)
-            break
+            return
         if quiet >= STALL_SECONDS:
             print(
-                f"STALL reported={state[0]}/{n} idle_not_reported=[{','.join(report.idle_unreported)}]",
+                f"STALL reported={state[0]}/{n} stuck=[{','.join(report.idle_unreported)}]",
                 flush=True,
             )
             quiet = 0
-        time.sleep(POLL_SECONDS)
+        sleep(POLL_SECONDS)
 
 
 if __name__ == "__main__":

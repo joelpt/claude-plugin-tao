@@ -66,7 +66,7 @@ Generate an id ONCE, print it, and reuse that literal value everywhere `<INV>` a
 INV="gc-$(date -u +%H%M%S)$RANDOM"; echo "$INV"
 ```
 
-Teammate names are `<INV>-linus`, `<INV>-guido`, `<INV>-anders`, `<INV>-carmack`, `<INV>-<guest>` (the roster). The prefix keeps a second roundtable in the same session, or any unrelated teammate, from being mixed up with this one.
+Teammate names are `<INV>-linus`, `<INV>-guido`, `<INV>-anders`, `<INV>-carmack`, `<INV>-<guest>` (the roster). `<guest>` is a lowercase slug of the guest's surname matching `[a-z0-9-]+` (e.g. `lamport`, `peyton-jones`); use that same slug in the `Agent` name, in `<ROSTER_CSV>`, and when teammates write `PEERS ENGAGED:`. The prefix keeps a second roundtable in the same session, or any unrelated teammate, from being mixed up with this one.
 
 The lead's address is `team-lead` (the verified address). Do not use `main`: it has been rejected for teammates.
 
@@ -80,7 +80,7 @@ Each spawn prompt MUST contain:
 2. The user's question/topic and any `--files` context.
 3. The full roster of peer names (exact `<INV>-...` names) and the invocation id.
 4. The round protocol, verbatim intent:
-   > "This roundtable is run in rounds by the lead. Every message you send MUST begin with the header `[RT:<INV>|<TYPE>|r<N>]` (TYPE is OPEN, REBUT or FINAL; N is the round number the lead gave you). Round 1: send your opening position to ALL peers with `SendMessage(to=\"<peer>\")`, then END YOUR TURN and do nothing else. Messages from peers are only delivered after your turn ends, so do not wait inside a turn and do not finalize now. Later rounds start when the lead messages you. Send nothing to the lead except what the lead asks for."
+   > "This roundtable is run in rounds by the lead. Every message you send MUST begin with the header `[RT:<INV>|<TYPE>|r<N>]` (TYPE is OPEN, REBUT or FINAL; N is the round number the lead gave you). Spawning you is round 1 (use `r1`, TYPE OPEN). Send your opening position to ALL peers with `SendMessage(to=\"<peer>\")`, then END YOUR TURN and do nothing else. Messages from peers are only delivered after your turn ends, so do not wait inside a turn and do not finalize now. Later rounds start when the lead messages you. In any one round send at most 2 messages to any single peer. Send nothing to the lead except what the lead asks for."
 5. The rebuttal and final rules, verbatim intent:
    > "When the lead opens a rebuttal round, your peers' positions are in your inbox. Respond to the strongest disagreement: concede or push back with reasons, sending a REBUT to the relevant peers. You may not finalize until you have received and responded to at least two peer messages. When the lead asks for your final, send exactly one message `SendMessage(to=\"team-lead\", summary=\"<name> final position\", message=...)` that starts with the header `[RT:<INV>|FINAL|r<N>] FINAL POSITION`, followed by the lines `PEERS ENGAGED: <names of the peers whose arguments you engaged>`, `CHANGED: <what changed your mind or what you conceded, or why you reaffirmed your position>`, then your full self-contained settled view including where you still disagree and why. It is the only thing the synthesizer will see from you."
 6. If `--high-effort`/`--thinking` is set, append: "Extended thinking enabled. Use `[[ ultrathink ]]`. Budget 32,000 thinking tokens."
@@ -89,23 +89,23 @@ Each spawn prompt MUST contain:
 
 Do not relay peer chatter, idle notifications or Monitor ticks to the user. Round cap: 3 discussion rounds by default; a teammate sends at most 2 messages to any one peer per round.
 
-1. **Round 1 (opening).** Spawning is round 1. Wait until all five teammates have gone idle (idle notifications).
-2. **Round 2 (rebuttal).** `SendMessage` each teammate: "Round 2. Your peers' positions are in your inbox. Respond to the strongest disagreement with a `[RT:<INV>|REBUT|r2]` message to the relevant peers: concede or push back with reasons. Then end your turn." Wait until all are idle.
+1. **Round 1 (opening).** Spawning is round 1. Wait until all five teammates have gone idle. Peer messages can wake an already-idle teammate, so do not count any idle: count only the idle notification that follows each teammate's turn after your round request (a teammate that wakes again to read peer mail produces another idle; wait for it to settle).
+2. **Round 2 (rebuttal).** `SendMessage` each teammate: "Round 2. Your peers' positions are in your inbox. Respond to the strongest disagreement with a `[RT:<INV>|REBUT|r2]` message to the relevant peers: concede or push back with reasons. Then end your turn." Wait for the idle notification that follows each teammate's turn on this request, as in round 1.
 3. **Round 3 (optional).** Only if positions are still moving or an unresolved disagreement remains: same instruction with `r3`. Skip otherwise.
 4. **Final.** `SendMessage` each teammate: "Request for FINAL. Read your inbox once more, then send your `[RT:<INV>|FINAL|r<N>]` FINAL POSITION to team-lead with PEERS ENGAGED and CHANGED lines", with `<N>` set to one past the last discussion round. Arm the stall detector (3d) with that `<N>` as the minimum round.
 5. If a FINAL arrives early or without PEERS ENGAGED / CHANGED lines (the detector prints `PREMATURE`), reply to that teammate: "Not yet: read your inbox, respond to a peer's argument, then resend your FINAL." Its earlier FINAL does not count.
 
 ### 3d. Arm the stall detector for the final phase
 
-The detector counts only FINALs from this invocation's roster that carry the `[RT:<INV>|FINAL|r<N>]` header with `N` at least the minimum round, name a roster peer other than the sender under `PEERS ENGAGED:`, and state a `CHANGED:` line. Arm a `Monitor` with `command` set to exactly this shell command text, substituting `<SESSION8>` (first 8 characters of the session id), `<INV>`, `<ROSTER_CSV>` (the five full names, comma-separated) and `<N>`:
+The detector counts only FINALs from this invocation's roster that carry the `[RT:<INV>|FINAL|r<N>]` header with `N` at least the minimum round, name a roster peer other than the sender under `PEERS ENGAGED:`, and state a `CHANGED:` line. Arm a `Monitor` with `command` set to exactly this shell command text, substituting `<SESSION8>` (first 8 characters of the current session id, i.e. the id shown in the transcript path or session context; the docs name the implicit team `session-<SESSION8>`), `<INV>`, `<ROSTER_CSV>` (the five full names, comma-separated) and `<N>`:
 
 ```text
 PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; python3 "$PLUGIN_ROOT/scripts/guru_stall.py" "$HOME/.claude/teams/session-<SESSION8>/inboxes/team-lead.json" <INV> <ROSTER_CSV> <N>
 ```
 
-The inbox location follows the Claude Code agent-teams docs (one team per session named `session-<first 8 chars of session id>`) but has not been confirmed in a live session: check that the file appears once teammates start messaging, and if it does not, locate the lead inbox under `~/.claude/teams/` and pass that path instead. Other `Monitor` fields: `description` `"guru roundtable stall detector"`, `timeout_ms` `1800000`, `persistent` `false`.
+The inbox location follows the Claude Code agent-teams docs (one team per session named `session-<first 8 chars of session id>`) but has not been confirmed in a live session: check that the file appears once teammates start messaging. The detector prints `INBOX_MISSING <path>` when it does not exist: then locate the lead inbox under `~/.claude/teams/` and pass that path instead. Other `Monitor` fields: `description` `"guru roundtable stall detector"`, `timeout_ms` `1800000`, `persistent` `false`.
 
-The Monitor emits `PROGRESS` as accepted finals land, `PREMATURE` for non-conforming finals, `STALL` (naming idle teammates with no accepted final) after 90 s without progress, and `ALL_REPORTED` then exits. On `STALL`: `SendMessage` each named teammate "Send your FINAL now, following the header format." On `ALL_REPORTED` (or all five accepted finals otherwise in hand): `TaskStop` the Monitor and proceed to Step 4. If a teammate stays unresponsive after two nudges, or the 30-minute cap hits, proceed with the finals in hand and note who did not report.
+The Monitor emits `INBOX_MISSING` / `INBOX_INVALID` when the inbox file is absent or not a JSON list, `PROGRESS` as accepted finals land, `PREMATURE` for non-conforming finals, `STALL` (naming stuck teammates, `stuck=[...]`: those whose latest message is an idle notification or a non-conforming FINAL, with no accepted final) after 90 s without progress, and `ALL_REPORTED` then exits. On `STALL`: `SendMessage` each named teammate "Send your FINAL now, following the header format." On `ALL_REPORTED` (or all five accepted finals otherwise in hand): `TaskStop` the Monitor and proceed to Step 4. If a teammate stays unresponsive after two nudges, or the 30-minute cap hits, proceed with the finals in hand and note who did not report.
 
 ### 3e. Fallback path — parallel isolated subagents (no cross-talk)
 
