@@ -279,6 +279,41 @@ class SignalsTest(unittest.TestCase):
         self.assertNotIn(INV, line)
 
 
+class WhoTest(unittest.TestCase):
+    def stats(self, name: str) -> guru_stats.Stats:
+        """Build a Stats record with fixed numbers."""
+        return guru_stats.Stats(name, 1234, 56, 3, 4, 75.0, set())
+
+    def test_parse_who_keys_by_full_name_and_splits_on_first_pipe(self) -> None:
+        who = guru_stats.parse_who(["linus=Linus Torvalds|Linux creator, a | b", "guido=Guido van Rossum|Python BDFL"], INV)
+        self.assertEqual(who[f"{INV}-linus"], ("Linus Torvalds", "Linux creator, a | b"))
+        self.assertEqual(who[f"{INV}-guido"], ("Guido van Rossum", "Python BDFL"))
+
+    def test_parse_who_rejects_malformed(self) -> None:
+        for bad in ("linus", "linus=Name", "linus=|desc", "=N|d"):
+            with self.assertRaises(ValueError):
+                guru_stats.parse_who([bad], INV)
+
+    def test_render_with_who_shows_full_name_and_description(self) -> None:
+        who = {f"{INV}-linus": ("Linus Torvalds", "Kernel maintainer; tests the API stability claim")}
+        table = guru_stats.render([self.stats(f"{INV}-linus")], INV, {}, who=who)
+        lines = table.splitlines()
+        self.assertIn("Who", lines[0])
+        self.assertIn("Linus Torvalds", lines[2])
+        self.assertIn("Kernel maintainer", lines[2])
+        self.assertEqual(lines[0].count("|"), lines[2].count("|"))
+
+    def test_render_with_who_marks_unlisted_and_missing_rows(self) -> None:
+        who = {f"{INV}-linus": ("Linus Torvalds", "d")}
+        table = guru_stats.render([self.stats(f"{INV}-kent")], INV, {}, missing=[f"{INV}-guido"], who=who)
+        rows = table.splitlines()
+        self.assertEqual({r.count("|") for r in rows}, {rows[0].count("|")})
+
+    def test_render_without_who_is_unchanged(self) -> None:
+        table = guru_stats.render([self.stats(f"{INV}-linus")], INV, {})
+        self.assertNotIn("Who", table.splitlines()[0])
+
+
 class StarArgTest(unittest.TestCase):
     def test_parses_and_clamps_star_pairs(self) -> None:
         stars = guru_stats.parse_stars("linus=4,guido=5", INV)

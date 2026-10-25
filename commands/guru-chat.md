@@ -160,13 +160,15 @@ Keep the preamble to factual framing only — panel composition only. Do not men
 
 ### Roundtable stats (live path only)
 
-After the synthesizer's output, append a `## Roundtable stats` section: one row per teammate with tokens, messages sent, messages received, wall-clock time and a 1-5 star contribution score. Skip it on the fallback path, which has no teammates. Run this in ONE self-contained `Bash` call, substituting `<INV>` and `<ROSTER_CSV>` (every panelist's full name, comma-separated) as in 3d:
+After the synthesizer's output, append a `## Roundtable stats` section: one row per teammate with full name, a terse who-and-why description, tokens, messages sent, messages received, wall-clock time and a 1-5 star contribution score. Skip it on the fallback path, which has no teammates. Run this in ONE self-contained `Bash` call, substituting `<INV>` and `<ROSTER_CSV>` (every panelist's full name, comma-separated) as in 3d:
 
 ```bash
-PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; python3 "$PLUGIN_ROOT/scripts/guru_stats.py" "$CLAUDE_CODE_SESSION_ID" <INV> <ROSTER_CSV>
+PLUGIN_ROOT="${TAO_PLUGIN_ROOT:-$(dirname "${TAO_SCRIPTS:-$HOME/code/claude-plugin-tao/scripts}")}"; python3 "$PLUGIN_ROOT/scripts/guru_stats.py" "$CLAUDE_CODE_SESSION_ID" <INV> <ROSTER_CSV> --who '<handle>=<Full Name>|<description>' --who ...
 ```
 
-It reads each teammate's transcript and prints the table with every score `unrated`, followed by a `Cited by peers' FINALs:` line. Rate each teammate yourself, then rerun the same command with `--stars <name>=<1-5>,...` (short names, e.g. `--stars linus=4,guido=5`) and present that table. Rate contribution to the outcome, not agreement with you, length or token spend:
+Pass one `--who` per panelist on both calls. The description is about 8-15 words: who they are plus why they mattered to THIS roundtable, taken from your Step 2 panel rationale for this question (not a generic bio). Omit `--who` entirely to get the handle-only table.
+
+It reads each teammate's transcript and prints the table with every score `unrated`, followed by a `Cited by peers' FINALs:` line. Rate each teammate yourself, then rerun the same command (same `--who` flags) with `--stars <name>=<1-5>,...` (short names, e.g. `--stars linus=4,guido=5`) and present that table. Rate contribution to the outcome, not agreement with you, length or token spend:
 
 - 5: their argument moved other teammates (peers' `CHANGED:` lines credit it, and several peers cite them).
 - 4: sharp, substantive engagement; forced a concession or conceded for a good reason.

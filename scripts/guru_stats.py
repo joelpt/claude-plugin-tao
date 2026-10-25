@@ -6,7 +6,7 @@ Reads each roster member's subagent transcript (located by session id and the ag
 reports tokens, messages sent and received, wall-clock time and a star rating for contribution.
 Only the star rating is a judgment: the lead passes it in with `--stars`.
 
-Usage: python3 guru_stats.py <session-id> <invocation-id> <roster-csv> [--stars linus=4,guido=3] [--projects-dir DIR]
+Usage: python3 guru_stats.py <session-id> <invocation-id> <roster-csv> [--stars linus=4,guido=3] [--who 'linus=Linus Torvalds|why relevant' ...] [--projects-dir DIR]
 """
 
 from __future__ import annotations
@@ -229,7 +229,42 @@ def parse_stars(spec: str, invocation: str) -> dict[str, int]:
     return stars
 
 
-def render(stats: list[Stats], invocation: str, stars: dict[str, int], missing: list[str] | None = None) -> str:
+def parse_who(specs: list[str], invocation: str) -> dict[str, tuple[str, str]]:
+    """Parse `linus=Linus Torvalds|description` items into (full name, description) by roster name.
+
+    Args:
+        specs: Items of the form `handle=Full Name|description`; the first `|` separates name from description.
+        invocation: Invocation id; added as a prefix to handles that lack it.
+
+    Returns:
+        (full name, description) per full roster name.
+
+    Raises:
+        ValueError: If an item lacks a handle, full name or description.
+    """
+    who: dict[str, tuple[str, str]] = {}
+    for spec in specs:
+        key, _, rest = spec.partition("=")
+        name, _, desc = rest.partition("|")
+        key, name, desc = key.strip(), name.strip(), desc.strip()
+        if not key or not name or not desc:
+            raise ValueError(f"bad --who {spec!r}: expected handle=Full Name|description")
+        who[key if key.startswith(f"{invocation}-") else f"{invocation}-{key}"] = (name, desc)
+    return who
+
+
+def _cell(text: str) -> str:
+    """Escape a value for a markdown table cell."""
+    return text.replace("|", "\\|")
+
+
+def render(
+    stats: list[Stats],
+    invocation: str,
+    stars: dict[str, int],
+    missing: list[str] | None = None,
+    who: dict[str, tuple[str, str]] | None = None,
+) -> str:
     """Render the statistics as a markdown table.
 
     Args:
@@ -237,23 +272,34 @@ def render(stats: list[Stats], invocation: str, stars: dict[str, int], missing: 
         invocation: Invocation id, dropped from displayed names.
         stars: Star rating per full roster name; absent names show as unrated.
         missing: Roster names with no transcript.
+        who: Optional (full name, description) per roster name; adds a Who column and shows the full name.
 
     Returns:
         The markdown table.
     """
+
+    def ident(name: str) -> str:
+        """Leading cell(s) for a teammate: handle, or full name plus description when known."""
+        if who is None:
+            return _short(name, invocation)
+        full, desc = who.get(name, (_short(name, invocation), "-"))
+        return f"{_cell(full)} | {_cell(desc)}"
+
     lines = [
-        "| Teammate | Tokens (total) | Sent | Received | Wall clock | Contribution |",
-        "|---|---|---|---|---|---|",
+        "| Teammate | Who | Tokens (total) | Sent | Received | Wall clock | Contribution |"
+        if who is not None
+        else "| Teammate | Tokens (total) | Sent | Received | Wall clock | Contribution |",
+        "|---|---|---|---|---|---|---|" if who is not None else "|---|---|---|---|---|---|",
     ]
     for s in stats:
         rating = stars.get(s.name)
         shown = "★" * rating + "☆" * (5 - rating) if rating else "unrated"
         lines.append(
-            f"| {_short(s.name, invocation)} | {s.tokens_total:,} ({s.tokens_output:,} out) | {s.sent} | {s.received} "
+            f"| {ident(s.name)} | {s.tokens_total:,} ({s.tokens_output:,} out) | {s.sent} | {s.received} "
             f"| {fmt_duration(s.seconds)} | {shown} |"
         )
     for name in missing or []:
-        lines.append(f"| {_short(name, invocation)} | no transcript found | - | - | - | unrated |")
+        lines.append(f"| {ident(name)} | no transcript found | - | - | - | unrated |")
     return "\n".join(lines)
 
 
@@ -277,17 +323,19 @@ def main(argv: list[str]) -> int:
     parser.add_argument("invocation")
     parser.add_argument("roster_csv")
     parser.add_argument("--stars", default="")
+    parser.add_argument("--who", action="append", default=[], help="handle=Full Name|description (repeatable)")
     parser.add_argument("--projects-dir", default=os.environ.get("CLAUDE_PROJECTS_DIR", str(Path.home() / ".claude" / "projects")))
     args = parser.parse_args(argv)
     try:
         stars = parse_stars(args.stars, args.invocation)
+        who = parse_who(args.who, args.invocation) if args.who else None
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     roster = [n.strip() for n in args.roster_csv.split(",") if n.strip()]
     found = find_transcripts(Path(args.projects_dir), args.session_id, roster)
     stats = [analyze(n, found[n], roster) for n in roster if n in found]
-    print(render(stats, args.invocation, stars, [n for n in roster if n not in found]))
+    print(render(stats, args.invocation, stars, [n for n in roster if n not in found], who))
     if not stars:
         print()
         print(render_signals(stats, args.invocation))
